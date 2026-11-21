@@ -1,105 +1,161 @@
-import { date, dueText, months, uzs } from '../format'
-import { Chip, Progress } from '../components/ui'
+import { useApp } from '../ctx'
+import { date, dueText } from '../format'
+import SubcardStack from '../components/SubcardStack'
+import ProposalCard from '../components/ProposalCard'
+import { Chip, Icon, Money, Progress } from '../components/ui'
 
-export default function Home({ state, go }) {
+export default function Home() {
+  const { state, t, lang, hidden, setHidden, go, openAgent } = useApp()
   const m = state.main
   const next = state.obligations[0]
-  const canAdd = state.goals.filter((g) => g.status === 'active').length < state.limits.max_goals
+  const advice = state.proposals_pending.find((p) => p.origin === 'agent')
+  const ts = state.today_summary
+
+  const actions = [
+    { icon: 'plus', label: t('qaNewGoal'), onClick: () => go('create') },
+    { icon: 'shield', label: t('qaObl'), onClick: () => go('payments') },
+    { icon: 'pay', label: t('qaPay'), onClick: () => go('payments') },
+    { icon: 'calc', label: t('qaCredit'), onClick: () => openAgent({ send: t('creditPrompt') }) },
+  ]
 
   return (
-    <div className="space-y-5">
-      {/* Main card */}
-      <section className="rounded-3xl p-6 text-white shadow-lg bg-gradient-to-br from-blue-600 to-blue-800">
-        <p className="text-blue-100">Основная карта · на жизнь</p>
-        <p className="num text-4xl font-bold mt-1 tracking-tight">{uzs(m.main_balance)}</p>
-        <div className="mt-4 rounded-2xl bg-white/10 px-4 py-3">
-          <p className="text-blue-100 text-sm">Можно спокойно тратить до зарплаты</p>
-          <p className="num text-xl font-semibold">{uzs(Math.max(0, m.free_to_spend))}</p>
+    <div>
+      {/* gradient continues from the header into the body */}
+      <section className="-mx-4 px-4 pt-2 pb-6 bg-gradient-to-b from-brand to-bg">
+        <div className="flex items-center gap-2 text-white/85">
+          <span>{t('totalBalance')}</span>
+          <button className="press w-9 h-9 grid place-items-center rounded-full hover:bg-white/10" onClick={() => setHidden(!hidden)}
+            aria-label={hidden ? t('show') : t('hide')}>
+            <Icon name={hidden ? 'eyeOff' : 'eye'} size={20} />
+          </button>
         </div>
-        {m.cash_gap && <p className="mt-3 text-amber-200">⚠ До зарплаты может не хватить денег</p>}
-      </section>
-
-      {/* Inbox banner */}
-      {state.inbox_count > 0 && (
-        <button onClick={() => go('agent')}
-          className="w-full card flex items-center gap-3 text-left border-blue-200 bg-blue-50 hover:bg-blue-100">
-          <span className="text-3xl" aria-hidden>🤖</span>
-          <span className="flex-1">
-            <span className="block font-bold">У помощника есть {state.inbox_count === 1 ? 'совет' : `${state.inbox_count} совета`}</span>
-            <span className="text-slate-600">Нажмите, чтобы посмотреть</span>
-          </span>
-          <span className="rounded-full bg-blue-600 text-white w-8 h-8 grid place-items-center font-bold">{state.inbox_count}</span>
-        </button>
-      )}
-
-      {/* Obligations strip */}
-      {next && (
-        <button onClick={() => go('obligations')} className="w-full card flex items-center gap-3 text-left hover:bg-slate-50">
-          <span className="text-3xl" aria-hidden>🛡</span>
-          <span className="flex-1 min-w-0">
-            <span className="block font-bold truncate">{next.name}</span>
-            <span className="text-slate-600">{uzs(next.amount)} · {dueText(next.due_in_days)}</span>
-          </span>
-          {next.status === 'shortfall' || next.status === 'overdue'
-            ? <Chip tone="amber" icon="⚠">не хватает</Chip>
-            : next.shortfall > 0
-              ? <Chip tone="blue" icon="…">копится</Chip>
-              : <Chip tone="green" icon="✓">отложено</Chip>}
-        </button>
-      )}
-
-      {/* Goals */}
-      <section>
-        <div className="flex items-center justify-between mb-3 px-1">
-          <h2 className="text-xl font-bold">Мои цели</h2>
-          <span className="text-sm text-slate-500">{state.used_percent}% из {state.limits.max_total_percent}% дохода</span>
+        <div className="flex items-center gap-3 mb-5">
+          <Money value={state.total_balance} className="text-[32px] font-extrabold tracking-tight text-white" />
+          <span className="rounded-full bg-white/15 px-3 py-1 text-sm font-semibold text-white">UZS</span>
         </div>
-        {state.goals.length === 0 && (
-          <div className="card text-center text-slate-600">
-            Пока нет целей. Начните с одной — например, на телефон.
+
+        <SubcardStack goals={state.goals} max={state.limits.max_goals} />
+
+        {/* main card */}
+        <div className="relative rounded-[22px] p-5 text-white shadow-glow bg-gradient-to-br from-[#1F5FC0] via-[#174A9A] to-[#0B2A6F] overflow-hidden">
+          <div className="absolute -right-10 -top-12 w-48 h-48 rounded-full bg-white/10" aria-hidden />
+          <div className="absolute -right-4 top-16 w-32 h-32 rounded-full bg-white/5" aria-hidden />
+          <div className="relative flex justify-between items-start">
+            <span className="font-extrabold tracking-wide">SmartGoal</span>
+            <span className="w-10 h-7 rounded-md bg-gradient-to-br from-amber-200 to-amber-400 opacity-90" aria-hidden />
           </div>
-        )}
-        <div className="space-y-3">
-          {state.goals.map((g) => (
-            <button key={g.id} onClick={() => go('goal', { id: g.id })} className="w-full card text-left hover:bg-slate-50">
-              <div className="flex items-center justify-between gap-3">
-                <span className="font-bold text-lg truncate">🎯 {g.name}</span>
-                {g.status === 'completed'
-                  ? <Chip tone="green" icon="🎉">собрано</Chip>
-                  : g.status === 'closing'
-                    ? <Chip tone="slate" icon="⏳">закрывается</Chip>
-                    : <Chip tone={g.disciplined ? 'green' : 'slate'} icon={g.disciplined ? '⭐' : null}>бонус {g.rate}%</Chip>}
-              </div>
-              <p className="mt-2 text-slate-700 num">Собрано {uzs(g.saved)} из {uzs(g.amount)}</p>
-              <div className="mt-2"><Progress value={g.progress} tone={g.progress >= 100 ? 'green' : 'blue'} /></div>
-              <p className="mt-2 text-sm text-slate-500">
-                {g.progress}% · {g.status === 'active' ? `до ${date(g.expiry)} (≈${months(g.months_worst)})` : ''}
-              </p>
-            </button>
-          ))}
+          <p className="relative mt-5 text-white/75 text-sm">{t('mainCardLabel')}</p>
+          <Money value={m.main_balance} className="relative block text-3xl font-bold mt-1" />
+          <div className="relative mt-4 flex justify-between items-end">
+            <div>
+              <p className="text-white/70 text-xs">{t('freeToSpend')}</p>
+              <Money value={Math.max(0, m.free_to_spend)} className="font-semibold" />
+            </div>
+            <span className="num tracking-widest text-white/80">•••• 4521</span>
+          </div>
+          {m.cash_gap && <p className="relative mt-3 text-amber-200 text-sm">⚠ {t('cashGap')}</p>}
         </div>
-        {canAdd && (
-          <button className="btn-soft w-full mt-3" onClick={() => go('create')}>＋ Новая цель</button>
-        )}
       </section>
 
-      {/* Recent */}
-      <section>
-        <h2 className="text-xl font-bold mb-3 px-1">Последние операции</h2>
-        <div className="card !py-2">
-          {state.transactions.slice(0, 6).map((t) => (
-            <div key={t.id} className="flex justify-between gap-3 py-2.5 border-b border-slate-100 last:border-0">
-              <span className="min-w-0">
-                <span className="block truncate">{t.title}</span>
-                <span className="text-sm text-slate-500">{date(t.date, false)}</span>
-              </span>
-              <span className={`num font-semibold shrink-0 ${t.amount > 0 ? 'text-emerald-700' : ''}`}>
-                {t.amount > 0 ? '+' : ''}{uzs(t.amount)}
-              </span>
+      <div className="space-y-7">
+        {/* quick actions */}
+        <section>
+          <h2 className="h-section">{t('quick')}</h2>
+          <div className="grid grid-cols-4 gap-2">
+            {actions.map((a) => (
+              <button key={a.label} onClick={a.onClick} className="press flex flex-col items-center gap-2 text-center">
+                <span className="w-16 h-16 rounded-full bg-card2 border border-line grid place-items-center text-ink hover:bg-white/10">
+                  <Icon name={a.icon} size={26} />
+                </span>
+                <span className="text-[13px] leading-tight text-ink/90">{a.label}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* today */}
+        <section>
+          <h2 className="h-section">{t('today')}</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="card !p-4">
+              <p className="text-muted text-sm">{t('spent')}</p>
+              <p className="text-rose-300 font-semibold mt-1">− <Money value={ts.spent} /></p>
+              <Progress className="mt-3" tone="amber" value={Math.round((ts.spent * 100) / ts.daily_baseline)} />
             </div>
-          ))}
-        </div>
-      </section>
+            <div className="card !p-4">
+              <p className="text-muted text-sm">{t('income')}</p>
+              <p className="text-emerald-300 font-semibold mt-1">+ <Money value={ts.income} /></p>
+              <Progress className="mt-3" tone="green" value={ts.income > 0 ? 100 : 0} />
+            </div>
+          </div>
+        </section>
+
+        {/* AI advisor */}
+        <section>
+          <h2 className="h-section flex items-center gap-2"><Icon name="sparkle" fill strokeWidth={0} className="text-amber-300" />{t('aiAdvisor')}</h2>
+          {advice ? <ProposalCard key={advice.id} p={advice} compact /> : (
+            <div className="card flex items-center gap-4">
+              <span className="w-12 h-12 shrink-0 rounded-full bg-emerald-400/15 text-emerald-300 grid place-items-center"><Icon name="check" /></span>
+              <div>
+                <p className="font-bold">{t('allGood')}</p>
+                <p className="text-muted text-sm">{t('allGoodSub')}</p>
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* obligations strip */}
+        {next && (
+          <section>
+            <h2 className="h-section">{t('obligations')}</h2>
+            <button onClick={() => go('payments')} className="press w-full card text-left">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-bold truncate">{next.name}</p>
+                  <p className="text-muted text-sm">{date(next.due_date, lang, false)} · {dueText(next.due_in_days, lang)}</p>
+                </div>
+                <StatusChip status={next.status} shortfall={next.shortfall} />
+              </div>
+              <Progress className="mt-3" tone={next.shortfall ? 'amber' : 'green'} value={Math.round((next.reserved * 100) / next.amount)} />
+              <p className="mt-2 text-sm text-muted">{t('reserved')} <Money value={next.reserved} /> / <Money value={next.amount} /></p>
+            </button>
+          </section>
+        )}
+
+        {/* banner */}
+        <section className="relative overflow-hidden rounded-card p-5 bg-gradient-to-r from-[#E9D3A8] via-[#D9B77A] to-[#B88A45] text-[#2A1C05]">
+          <div className="absolute -right-6 -bottom-10 w-40 h-40 rounded-full bg-white/25" aria-hidden />
+          <div className="absolute right-6 top-4 text-5xl" aria-hidden>📈</div>
+          <p className="relative text-2xl font-extrabold max-w-[75%]">{t('bannerTitle')}</p>
+          <p className="relative mt-1 text-sm max-w-[70%] text-[#3d2a0a]">{t('bannerSub')}</p>
+        </section>
+
+        {/* recent */}
+        <section>
+          <h2 className="h-section">{t('recent')}</h2>
+          <div className="card !py-1">
+            {state.transactions.slice(0, 5).map((tx) => (
+              <div key={tx.id} className="flex justify-between gap-3 py-3 border-b border-line last:border-0">
+                <span className="min-w-0">
+                  <span className="block truncate">{tx.title}</span>
+                  <span className="text-sm text-muted">{date(tx.date, lang, false)}</span>
+                </span>
+                <span className={`font-semibold shrink-0 ${tx.amount > 0 ? 'text-emerald-300' : ''}`}>
+                  {tx.amount > 0 ? '+' : ''}<Money value={tx.amount} />
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
     </div>
   )
+}
+
+export function StatusChip({ status, shortfall }) {
+  const { t } = useApp()
+  if (status === 'overdue') return <Chip tone="red" icon="!">{t('st_overdue')}</Chip>
+  if (status === 'shortfall') return <Chip tone="amber" icon="⚠">{t('st_shortfall')}</Chip>
+  if (shortfall > 0) return <Chip tone="blue" icon="…">{t('st_soon')}</Chip>
+  return <Chip tone="green" icon="✓">{t('st_ok')}</Chip>
 }

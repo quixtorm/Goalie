@@ -28,7 +28,8 @@ export const api = {
   spend: (b) => request('POST', '/spend', b),
   resolve: (id, option, confirm = false) =>
     request('POST', `/spend/${encodeURIComponent(id)}/resolve`, { option, confirm }),
-  chat: (message, history) => request('POST', '/agent/chat', { message, history }),
+  reorder: (ids) => request('POST', '/subcards/reorder', { ids }),
+  chat: (message, history, lang = 'ru') => request('POST', '/agent/chat', { message, history, lang }),
   inbox: () => request('GET', '/agent/inbox'),
   confirm: (id, option) => request('POST', `/agent/proposals/${encodeURIComponent(id)}/confirm`, option ? { option } : {}),
   reject: (id) => request('POST', `/agent/proposals/${encodeURIComponent(id)}/reject`),

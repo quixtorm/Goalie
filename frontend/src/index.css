@@ -2,13 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body { background: #eef2f7; color: #0f172a; font-size: 16px; -webkit-tap-highlight-color: transparent; }
+html, body { background: #0F1115; color: #EEF1F6; font-size: 16px; -webkit-tap-highlight-color: transparent; }
+html, body { overflow-x: hidden; }
+body { overscroll-behavior-y: none; }
 .num { font-variant-numeric: tabular-nums; }
-.btn { @apply inline-flex items-center justify-center gap-2 rounded-2xl px-5 min-h-[48px] font-semibold text-base transition active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-300; }
-.btn-primary { @apply btn bg-blue-600 text-white hover:bg-blue-700; }
-.btn-success { @apply btn bg-emerald-600 text-white hover:bg-emerald-700; }
-.btn-soft { @apply btn bg-white text-slate-800 border border-slate-200 hover:bg-slate-50; }
-.btn-link { @apply inline-flex items-center min-h-[44px] px-2 text-blue-700 font-medium underline-offset-4 hover:underline; }
-.card { @apply bg-white rounded-3xl p-5 shadow-sm border border-slate-100; }
-.input { @apply w-full rounded-2xl border border-slate-300 bg-white px-4 min-h-[52px] text-lg focus:outline-none focus:ring-4 focus:ring-blue-200 focus:border-blue-500; }
-.label { @apply block text-sm font-medium text-slate-600 mb-1.5; }
+::-webkit-scrollbar { width: 0; height: 0; }
+
+@layer components {
+  .press { @apply transition-transform duration-150 active:scale-[0.97]; }
+  .btn { @apply press inline-flex items-center justify-center gap-2 rounded-btn px-5 min-h-[50px] font-semibold text-base disabled:opacity-40 disabled:pointer-events-none focus:outline-none focus-visible:ring-4 focus-visible:ring-brand/40; }
+  .btn-primary { @apply btn bg-brand text-white shadow-glow hover:bg-brand-light; }
+  .btn-success { @apply btn bg-emerald-500 text-white hover:bg-emerald-400; }
+  .btn-ghost { @apply btn bg-card2 text-ink border border-line hover:bg-white/10; }
+  .btn-link { @apply inline-flex items-center justify-center min-h-[44px] px-2 text-muted font-medium underline-offset-4 hover:underline hover:text-ink; }
+  .card { @apply bg-card rounded-card border border-line p-5; }
+  .input { @apply w-full rounded-btn border border-line bg-card2 px-4 min-h-[52px] text-lg text-ink placeholder:text-muted/70 focus:outline-none focus:ring-4 focus:ring-brand/30 focus:border-brand; }
+  .label { @apply block text-sm font-medium text-muted mb-1.5; }
+  .h-section { @apply text-xl font-bold px-1 mb-3; }
+  .skeleton { @apply rounded-card bg-[linear-gradient(90deg,#1B1E24_0%,#262A33_50%,#1B1E24_100%)] bg-[length:200%_100%] animate-shimmer; }
+}

@@ -1,6 +1,8 @@
 // Display only. The frontend never calculates money — it formats numbers the API returned.
-const MONTHS = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа',
-  'сентября', 'октября', 'ноября', 'декабря']
+const MONTHS = {
+  ru: ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'],
+  uz: ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avgust', 'sentabr', 'oktabr', 'noyabr', 'dekabr'],
+}
 
 export function uzs(n) {
   if (n === null || n === undefined) return '—'
@@ -8,27 +10,37 @@ export function uzs(n) {
   return `${n < 0 ? '−' : ''}${s} so'm`
 }
 
-export function plural(n, one, few, many) {
+function pluralRu(n, one, few, many) {
   const a = Math.abs(n) % 100, b = a % 10
   if (b === 1 && a !== 11) return one
   if (b >= 2 && b <= 4 && (a < 12 || a > 14)) return few
   return many
 }
 
-export const months = (n) => `${n} ${plural(n, 'месяц', 'месяца', 'месяцев')}`
-export const days = (n) => `${n} ${plural(n, 'день', 'дня', 'дней')}`
+export const months = (n, lang = 'ru') =>
+  lang === 'uz' ? `${n} oy` : `${n} ${pluralRu(n, 'месяц', 'месяца', 'месяцев')}`
+export const days = (n, lang = 'ru') =>
+  lang === 'uz' ? `${n} kun` : `${n} ${pluralRu(n, 'день', 'дня', 'дней')}`
 
-export function date(iso, withYear = true) {
+export function date(iso, lang = 'ru', withYear = true) {
   if (!iso) return '—'
   const [y, m, d] = iso.slice(0, 10).split('-').map(Number)
-  return `${d} ${MONTHS[m - 1]}${withYear ? ` ${y}` : ''}`
+  const mon = MONTHS[lang][m - 1]
+  if (lang === 'uz') return `${d}-${mon}${withYear ? ` ${y}` : ''}`
+  return `${d} ${mon}${withYear ? ` ${y}` : ''}`
 }
 
-export function dueText(daysLeft) {
-  if (daysLeft < 0) return 'просрочено'
-  if (daysLeft === 0) return 'сегодня'
-  if (daysLeft === 1) return 'завтра'
-  return `через ${days(daysLeft)}`
+export function dueText(n, lang = 'ru') {
+  if (lang === 'uz') {
+    if (n < 0) return "muddati o'tgan"
+    if (n === 0) return 'bugun'
+    if (n === 1) return 'ertaga'
+    return `${n} kundan keyin`
+  }
+  if (n < 0) return 'просрочено'
+  if (n === 0) return 'сегодня'
+  if (n === 1) return 'завтра'
+  return `через ${days(n, lang)}`
 }
 
 export const digitsOnly = (s) => Number(String(s).replace(/\D/g, '').slice(0, 13)) || 0

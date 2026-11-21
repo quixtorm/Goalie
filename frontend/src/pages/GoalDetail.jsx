@@ -1,13 +1,16 @@
 import { useState } from 'react'
 import { api } from '../api'
+import { useApp } from '../ctx'
 import { date, months, uzs } from '../format'
-import { Chip, ConfirmModal, Progress, Row } from '../components/ui'
+import { PRIO_BG, PrioBadge } from '../components/SubcardStack'
+import { BackButton, Chip, ConfirmSheet, Icon, Money, Ring, Row } from '../components/ui'
 
-export default function GoalDetail({ state, id, go, onChanged, notify }) {
+export default function GoalDetail({ id }) {
+  const { state, t, lang, go, notify, refresh } = useApp()
   const g = state.goals.find((x) => x.id === id)
   const [modal, setModal] = useState(null)
   const [busy, setBusy] = useState(false)
-  if (!g) return <div className="card text-center">Цель не найдена. <button className="btn-link" onClick={() => go('home')}>На главную</button></div>
+  if (!g) return <div className="pt-4"><BackButton onClick={() => go('goals')} /><div className="card text-center mt-3">—</div></div>
 
   async function run(fn, msg) {
     setBusy(true)
@@ -15,7 +18,7 @@ export default function GoalDetail({ state, id, go, onChanged, notify }) {
       await fn()
       notify({ text: msg })
       setModal(null)
-      onChanged()
+      refresh()
     } catch (e) {
       notify({ text: e.message, error: true })
     } finally {
@@ -24,58 +27,55 @@ export default function GoalDetail({ state, id, go, onChanged, notify }) {
   }
 
   return (
-    <div className="space-y-5">
-      <button className="btn-link -ml-2" onClick={() => go('home')}>← Назад</button>
-      <section className="card">
-        <div className="flex items-start justify-between gap-3">
-          <h1 className="text-2xl font-bold">🎯 {g.name}</h1>
-          <Chip tone={g.disciplined ? 'green' : 'slate'} icon={g.disciplined ? '⭐' : '%'}>
-            {g.disciplined ? `${g.rate}% — за дисциплину` : `${g.rate}% — базовый`}
+    <div className="space-y-5 pt-4">
+      <BackButton onClick={() => go('goals')} />
+
+      <section className="card text-center relative overflow-hidden">
+        {g.priority > 0 && <div className={`absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r ${PRIO_BG[g.priority - 1]}`} />}
+        <div className="flex items-center justify-center gap-2">
+          {g.priority > 0 && <PrioBadge n={g.priority} className={`bg-gradient-to-br ${PRIO_BG[g.priority - 1]}`} />}
+          <h1 className="text-2xl font-bold">{g.name}</h1>
+        </div>
+        <div className="mt-4 flex justify-center"><Ring value={g.progress} /></div>
+        <p className="mt-2 text-muted">{t('collected')}</p>
+        <Money value={g.saved} className="block text-3xl font-bold" />
+        <p className="text-muted">/ <Money value={g.amount} /></p>
+        <div className="mt-3">
+          <Chip tone={g.disciplined ? 'green' : 'slate'} icon={g.disciplined ? '★' : null}>
+            {g.disciplined ? t('bonusDisc', g.rate) : t('bonusBase', g.rate)}
           </Chip>
         </div>
-        <p className="mt-4 text-slate-600">Собрано</p>
-        <p className="num text-4xl font-bold">{uzs(g.saved)}</p>
-        <p className="num text-slate-600">из {uzs(g.amount)}</p>
-        <div className="mt-3"><Progress value={g.progress} tone={g.progress >= 100 ? 'green' : 'blue'} /></div>
-        <p className="mt-2 text-sm text-slate-500">{g.progress}% готово</p>
       </section>
 
       {g.status === 'active' && (
-        <section className="card">
-          <h2 className="font-bold text-lg mb-1">Когда соберёте</h2>
-          <Row label="Если доход как обычно" value={`≈ ${months(g.months_best)}`} />
-          <Row label="Если доход самый низкий" value={`≈ ${months(g.months_worst)}`} />
-          <Row label="Срок цели" value={`до ${date(g.expiry)}`} strong />
-          <Row label="Откладываем" value={`${g.percent}% дохода (≈ ${uzs(g.contribution_worst)})`} />
-          <Row label="Бонус уже начислен" value={uzs(g.accrued_bonus)} />
+        <section className="card !py-2">
+          <Row label={t('bestCase')}>≈ {months(g.months_best, lang)}</Row>
+          <Row label={t('worstCase')}>≈ {months(g.months_worst, lang)}</Row>
+          <Row label={t('deadline')} strong>{t('until', date(g.expiry, lang))}</Row>
+          <Row label={t('perMonth')}>{t('pctIncome', g.percent)} · ≈ <Money value={g.contribution_worst} /></Row>
+          <Row label={t('bonusAccrued')}><Money value={g.accrued_bonus} /></Row>
         </section>
       )}
 
-      <section className="card bg-blue-50 border-blue-100">
-        <p className="text-slate-700">
-          🔒 Деньги защищены. Аптека и больница — без штрафа. Остальное — с паузой на сутки
-          {g.disciplined ? ' и потерей бонуса за дисциплину.' : '.'}
-        </p>
+      <section className="card !p-4 flex gap-3 bg-brand/10 border-brand/25">
+        <Icon name="lock" className="shrink-0 text-brand-light mt-0.5" />
+        <p className="text-ink/90 text-sm">{t('lockShort')}</p>
       </section>
 
       {g.can_use && (
-        <button className="btn-success w-full !min-h-[56px] text-lg" onClick={() => setModal('use')}>🎉 Использовать накопленное</button>
+        <button className="btn-success w-full !min-h-[56px] text-lg" onClick={() => setModal('use')}>🎉 {t('use')}</button>
       )}
       {g.status === 'active' && (
-        <button className="btn-link w-full justify-center text-slate-500" onClick={() => setModal('close')}>Закрыть цель досрочно</button>
+        <button className="btn-link w-full" onClick={() => setModal('close')}>{t('closeEarly')}</button>
       )}
-      {g.status === 'closing' && (
-        <p className="text-center text-slate-600">⏳ Цель закрывается. Деньги вернутся на основную карту через 24 часа.</p>
-      )}
+      {g.status === 'closing' && <p className="text-center text-muted">⏳ {t('closingNote')}</p>}
 
-      <ConfirmModal open={modal === 'use'} onClose={() => setModal(null)} busy={busy} tone="success"
-        title="Использовать цель?"
-        text={`${uzs(g.saved)} и бонус ${uzs(g.accrued_bonus)} перейдут на основную карту.`}
-        confirmLabel="Да, перевести" onConfirm={() => run(() => api.useGoal(g.id), 'Поздравляем! Деньги на основной карте')} />
-      <ConfirmModal open={modal === 'close'} onClose={() => setModal(null)} busy={busy}
-        title="Закрыть цель досрочно?"
-        text={`${uzs(g.saved)} вернутся на основную карту через 24 часа.\nНачисленный бонус ${uzs(g.accrued_bonus)} сгорит.`}
-        confirmLabel="Да, закрыть" onConfirm={() => run(() => api.closeGoal(g.id), 'Цель закроется через 24 часа')} />
+      <ConfirmSheet open={modal === 'use'} onClose={() => setModal(null)} busy={busy} tone="success"
+        title={t('useTitle')} text={t('useText', uzs(g.saved), uzs(g.accrued_bonus))}
+        confirmLabel={t('useOk')} onConfirm={() => run(() => api.useGoal(g.id), t('done'))} />
+      <ConfirmSheet open={modal === 'close'} onClose={() => setModal(null)} busy={busy}
+        title={t('closeTitle')} text={t('closeText', uzs(g.saved), uzs(g.accrued_bonus))}
+        confirmLabel={t('closeOk')} onConfirm={() => run(() => api.closeGoal(g.id), t('closingNote'))} />
     </div>
   )
 }

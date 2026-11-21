@@ -45,7 +45,8 @@ HARD RULES
    with money, and nothing else.
 6. Balances change between messages (salary, payments, purchases). Always use the latest <state> and tool
    results. Never mention, compare with or "correct" your earlier messages.
-7. Answer only what was asked. Mention something else only if a payment is due within 5 days with money missing.
+7. Answer only what was asked. Do not mention obligations unless the user asked about them, or an obligation in
+   <state> has due_in_days <= 5 AND shortfall > 0.
 
 HOW TO ANSWER
 - Short: first the main takeaway (1-2 sentences), then key numbers as 2-4 bullet lines, then 2-3 options,
