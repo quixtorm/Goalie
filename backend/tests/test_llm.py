@@ -54,6 +54,7 @@ def test_tool_loop_creates_proposal_only(s, monkeypatch):
     # tool result carried calc.py numbers back to the model
     tr = fake.calls[1]["messages"][-1]["content"][0]
     assert '"percent": 21' in tr["content"] and '"months_worst": 36' in tr["content"]
+    assert '"contribution_worst": "1 428 000 so\'m"' in tr["content"]  # money pre-formatted for the model
     # request shape rules
     kw = fake.calls[0]
     assert kw["tool_choice"] == {"type": "auto"} and "temperature" not in kw
