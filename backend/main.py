@@ -278,7 +278,7 @@ def inbox():
     with STORE.lock:
         agent.agent_review(STORE.state)
         ps = sorted(STORE.state.proposals.values(), key=lambda p: p.created_at, reverse=True)
-        return [proposals.view(p) for p in ps if p.status == "pending" or p.origin == "agent"][:30]
+        return [proposals.view(p) for p in ps][:50]
 
 
 @app.post("/agent/proposals/{pid}/confirm")
