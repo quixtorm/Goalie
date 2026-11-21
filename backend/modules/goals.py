@@ -17,6 +17,7 @@ def view(s: State, g: Goal) -> dict:
     f = forecast(s, g)
     return {
         "id": g.id, "name": g.name, "amount": g.amount, "saved": g.saved, "percent": g.percent,
+        "priority": g.priority,
         "progress": min(100, round(g.saved * 100 / g.amount)) if g.amount else 0,
         "remaining": f.remaining, "months_worst": f.months_worst, "months_best": f.months_best,
         "expiry": f.expiry.isoformat(), "contribution_worst": f.contribution_worst,
@@ -56,9 +57,21 @@ def suggest(s: State, amount: int, months: int, exclude: str | None = None) -> d
 def create(s: State, name: str, amount: int, percent: int) -> Goal:
     calc.validate_new_goal(len(budget.active_goals(s)), percent, budget.used_percent(s), amount)
     mw = calc.months_needed(amount, percent, budget.basis(s).worst)
-    g = Goal(id=new_id("goal"), name=name, amount=amount, saved=0, percent=percent, planned_months_left=mw)
+    g = Goal(id=new_id("goal"), name=name, amount=amount, saved=0, percent=percent, planned_months_left=mw,
+             priority=len(budget.active_goals(s)) + 1)
     s.goals[g.id] = g
+    budget.renumber(s)
     return g
+
+
+def reorder(s: State, ids: list[str]) -> list[Goal]:
+    """ids = active goal ids from highest to lowest priority. Must list each active goal exactly once."""
+    active = {g.id for g in budget.active_goals(s)}
+    if len(ids) != len(set(ids)) or set(ids) != active:
+        raise CalcError("Список целей не совпадает с активными целями")
+    for i, gid in enumerate(ids, start=1):
+        s.goals[gid].priority = i
+    return budget.active_goals(s)
 
 
 def set_percent(s: State, goal_id: str, percent: int) -> Goal:
@@ -85,6 +98,7 @@ def use(s: State, goal_id: str) -> dict:
     s.main_balance += payout
     s.add_tx(f"Цель «{g.name}» достигнута (с бонусом {calc.fmt_uzs(g.accrued_bonus)})", payout)
     g.saved, g.status = 0, "used"
+    budget.renumber(s)
     return {"payout": payout, "bonus": g.accrued_bonus}
 
 
@@ -95,6 +109,7 @@ def start_close(s: State, goal_id: str) -> dict:
     g.status = "closing"
     g.close_ready_at = s.clock + timedelta(hours=calc.COOLDOWN_HOURS)
     lost = g.accrued_bonus
+    budget.renumber(s)
     return {"returns": g.saved, "bonus_lost": lost, "ready_at": g.close_ready_at.isoformat()}
 
 
@@ -104,6 +119,7 @@ def finish_closures(s: State) -> None:
             s.main_balance += g.saved
             s.add_tx(f"Цель «{g.name}» закрыта, деньги вернулись", g.saved)
             g.saved, g.accrued_bonus, g.status = 0, 0, "closed"
+    budget.renumber(s)
 
 
 def credit_impact(s: State, payment: int) -> list[dict]:

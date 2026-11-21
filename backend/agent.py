@@ -15,14 +15,15 @@ from state import State
 
 log = logging.getLogger("agent")
 
-CONFIRM_RE = re.compile(r"^\s*(да|подтверждаю|ок|окей|давай|создай|yes)\s*[.!]?\s*$", re.IGNORECASE)
+CONFIRM_RE = re.compile(r"^\s*(да|подтверждаю|ок|окей|давай|создай|yes|ha|xa|tasdiqlayman|mayli)\s*[.!]?\s*$",
+                        re.IGNORECASE)
 
 
 def _pending_chat(s: State):
     return [p for p in s.proposals.values() if p.origin == "chat" and p.status == "pending"]
 
 
-def chat(s: State, message: str, history: list[dict]) -> dict:
+def chat(s: State, message: str, history: list[dict], lang: str = "ru") -> dict:
     # 1. typed confirmation is handled by CODE, never by the LLM
     if CONFIRM_RE.match(message):
         pend = _pending_chat(s)
@@ -39,7 +40,7 @@ def chat(s: State, message: str, history: list[dict]) -> dict:
         before = set(s.proposals)
         try:
             import llm
-            out = llm.chat(s, message, history)
+            out = llm.chat(s, message, history, lang)
             if out is not None:
                 return {**out, "source": "llm"}
         except Exception as e:  # never break the demo; never leak details

@@ -58,7 +58,7 @@ def test_tool_loop_creates_proposal_only(s, monkeypatch):
     # request shape rules
     kw = fake.calls[0]
     assert kw["tool_choice"] == {"type": "auto"} and "temperature" not in kw
-    assert kw["messages"][0]["content"].startswith("<state>")
+    assert kw["messages"][0]["content"].startswith("<lang>ru</lang>\n<state>")
     # typed "да" is confirmed by code, not the LLM
     r2 = agent.chat(s, "да", [])
     assert r2["source"] == "code" and len(s.goals) == 2

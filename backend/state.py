@@ -25,6 +25,7 @@ class Goal:
     accrued_bonus: int = 0
     status: str = "active"  # active | completed | used | closing | closed
     close_ready_at: datetime | None = None
+    priority: int = 0  # 1 = highest; 0 = not active (completed/closed)
 
 
 @dataclass
@@ -81,15 +82,17 @@ class State:
     stops: dict[str, Stop] = field(default_factory=dict)
     proposals: dict[str, Proposal] = field(default_factory=dict)
     transactions: list[dict[str, Any]] = field(default_factory=list)
+    last_salary: dict[str, Any] | None = None
 
     @property
     def today(self) -> date:
         return self.clock.date()
 
-    def add_tx(self, title: str, amount: int, source: str = "main", mcc: str | None = None) -> None:
+    def add_tx(self, title: str, amount: int, source: str = "main", mcc: str | None = None,
+               internal: bool = False) -> None:
         self.transactions.insert(0, {
             "id": new_id("tx"), "date": self.today.isoformat(), "title": title,
-            "amount": amount, "source": source, "mcc": mcc,
+            "amount": amount, "source": source, "mcc": mcc, "internal": internal,
         })
         del self.transactions[50:]
 

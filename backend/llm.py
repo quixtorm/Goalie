@@ -27,7 +27,9 @@ log = logging.getLogger("llm")
 MAX_TOOL_ROUNDS = 5
 
 SYSTEM_PROMPT = """You are «Помощник», a friendly financial assistant inside a banking app in Uzbekistan.
-You help people save for goals, pay obligations on time and avoid impulsive spending. Reply ONLY in simple Russian.
+You help people save for goals, pay obligations on time and avoid impulsive spending.
+Reply in the language given in <lang>: "ru" = simple Russian, "uz" = simple Uzbek (Latin script). The verbatim
+lock sentence below may stay in Russian only when <lang> is ru; for uz translate it faithfully.
 
 HARD RULES
 1. Never compute, estimate or round numbers yourself. Every number you mention must come from a tool result
@@ -126,8 +128,9 @@ def compact_state(s: State) -> dict:
         "main_card": budget.cashflow_view(s),
         "income": {"worst": b.worst, "avg": calc.round_money(b.avg), "next_salary": s.next_income_date.isoformat()},
         "goals": [{k: v for k, v in goals.view(s, g).items()
-                   if k in ("name", "amount", "saved", "percent", "months_best", "months_worst", "expiry", "rate",
-                            "status")} for g in s.goals.values() if g.status in ("active", "completed")],
+                   if k in ("name", "priority", "amount", "saved", "percent", "months_best", "months_worst",
+                            "expiry", "rate", "status")} for g in budget.active_goals(s)],
+        "last_salary": s.last_salary,
         "used_percent": budget.used_percent(s),
         "obligations": [{k: v for k, v in obligations.view(s, o).items()
                          if k in ("name", "amount", "due_date", "reserved", "shortfall", "due_in_days")}
@@ -136,7 +139,7 @@ def compact_state(s: State) -> dict:
     }
 
 
-PLAIN_INT_KEYS = {"percent", "raw_percent", "cap_percent", "used_percent", "months", "target_months",
+PLAIN_INT_KEYS = {"priority", "percent", "raw_percent", "cap_percent", "used_percent", "months", "target_months",
                   "months_worst", "months_best", "months_before", "months_after", "delay_months", "dti_percent",
                   "days_until_next_income", "due_in_days", "max_goals", "max_total_percent", "rate", "new_percent",
                   "old_percent", "progress", "planned_months_left"}
@@ -198,14 +201,16 @@ def client() -> anthropic.Anthropic:
     return _client
 
 
-def chat(s: State, message: str, history: list[dict]) -> dict | None:
+def chat(s: State, message: str, history: list[dict], lang: str = "ru") -> dict | None:
     model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-5-5")
     msgs: list[dict] = [{"role": h["role"], "content": h["content"]} for h in history[-10:] if h.get("content")]
     # API needs alternating roles starting with user
     while msgs and msgs[0]["role"] != "user":
         msgs.pop(0)
     data = json.dumps(humanize(compact_state(s)), ensure_ascii=False)
-    msgs.append({"role": "user", "content": f"<state>{data}</state>\n<user_message>{message}</user_message>"})
+    lang = "uz" if lang == "uz" else "ru"
+    msgs.append({"role": "user",
+                 "content": f"<lang>{lang}</lang>\n<state>{data}</state>\n<user_message>{message}</user_message>"})
     created: list = []
 
     for _ in range(MAX_TOOL_ROUNDS):

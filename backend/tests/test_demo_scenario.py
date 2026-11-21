@@ -32,7 +32,14 @@ def test_step1_create_car_goal_via_chat(c):
     r2 = c.post("/agent/chat", json={"message": "да"}).json()
     assert "создана" in r2["reply"]
     g = car(c)
-    assert g["percent"] == 21 and g["planned_months_left"] == 36
+    assert g["percent"] == 21 and g["planned_months_left"] == 36 and g["priority"] == 2
+
+
+def test_step1b_reorder_car_first(c):
+    r = c.post("/subcards/reorder", json={"ids": [car(c)["id"], "goal_phone"]})
+    assert r.status_code == 200
+    names = [g["name"] for g in c.get("/state").json()["goals"]]
+    assert names == ["Машина", "Телефон"] and car(c)["priority"] == 1
 
 
 def test_step2_salary_drop_and_new_percent(c):
@@ -40,6 +47,8 @@ def test_step2_salary_drop_and_new_percent(c):
     assert flow["obligations"] == [{"id": "obl_rent", "name": "Аренда квартиры", "amount": 1_500_000}]
     amounts = {g["name"]: g["amount"] for g in flow["goals"]}
     assert amounts == {"Телефон": 637_500, "Машина": 1_338_750}
+    assert [g["name"] for g in flow["goals"]] == ["Машина", "Телефон"]  # priority order
+    assert flow["shortfalls"] == []
     assert flow["main"] == 2_898_750
     st = c.get("/state").json()
     assert st["main"]["main_balance"] == 14_898_750

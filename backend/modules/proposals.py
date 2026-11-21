@@ -192,26 +192,33 @@ def salary(s: State, amount: int) -> dict:
     for g in budget.active_goals(s):
         g.accrued_bonus += calc.monthly_bonus(g.saved, g.disciplined)
     left = amount
-    flow = {"obligations": [], "goals": [], "main": 0}
+    flow = {"salary": amount, "obligations": [], "goals": [], "shortfalls": [], "main": 0}
     for o in sorted((o for o in s.obligations.values() if not o.paid), key=lambda x: x.due_date):
         put = min(max(0, o.amount - o.reserved), left)
         if put:
             o.reserved += put
             left -= put
             flow["obligations"].append({"id": o.id, "name": o.name, "amount": put})
+    # goals in PRIORITY order: if money runs out, higher-priority goals are funded first
     for g in budget.active_goals(s):
-        put = min(calc.round_money(calc.monthly_contribution(g.percent, amount)), g.amount - g.saved, left)
+        wanted = min(calc.round_money(calc.monthly_contribution(g.percent, amount)), g.amount - g.saved)
+        put = min(wanted, left)
         if put > 0:
             g.saved += put
             left -= put
-            flow["goals"].append({"id": g.id, "name": g.name, "amount": put})
+            flow["goals"].append({"id": g.id, "name": g.name, "priority": g.priority, "amount": put})
+        if put < wanted:
+            flow["shortfalls"].append({"id": g.id, "name": g.name, "priority": g.priority, "wanted": wanted,
+                                       "funded": put, "shortfall": wanted - put})
         g.planned_months_left = max(0, g.planned_months_left - 1)
         if g.saved >= g.amount:
             g.status = "completed"
+    budget.renumber(s)
     s.main_balance += left
     flow["main"] = left
     s.add_tx("Зарплата", amount)
     s.next_income_date = s.today + timedelta(days=calc.PAYDAY_INTERVAL_DAYS)
+    s.last_salary = {**flow, "date": s.today.isoformat()}
     agent_review(s)
     return flow
 

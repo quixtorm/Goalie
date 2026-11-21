@@ -15,7 +15,7 @@ def seed() -> State:
     )
     s.goals["goal_phone"] = Goal(
         id="goal_phone", name="Телефон", amount=8_000_000, saved=3_200_000, percent=10,
-        disciplined=True, planned_months_left=8,
+        disciplined=True, planned_months_left=8, priority=1,
     )
     s.obligations["obl_rent"] = Obligation(
         id="obl_rent", name="Аренда квартиры", amount=2_500_000, due_date=date(2026, 12, 7),

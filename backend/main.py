@@ -123,6 +123,11 @@ class ChatTurn(Strict):
 class ChatIn(Strict):
     message: str = Field(min_length=1, max_length=1000)
     history: list[ChatTurn] = Field(default_factory=list, max_length=20)
+    lang: Literal["ru", "uz"] = "ru"
+
+
+class ReorderIn(Strict):
+    ids: list[str] = Field(min_length=1, max_length=calc.MAX_SUBCARDS)
 
 
 class SalaryIn(Strict):
@@ -138,13 +143,23 @@ def state_view() -> dict:
     s = STORE.state
     b = budget.basis(s)
     pend = [p for p in s.proposals.values() if p.status == "pending"]
+    today_tx = [t for t in s.transactions if t["date"] == s.today.isoformat() and not t.get("internal")]
+    goal_list = sorted((g for g in s.goals.values() if g.status in ("active", "completed", "closing")),
+                       key=lambda g: (g.priority or 99, g.id))
     return {
         "today": s.today.isoformat(),
         "clock": s.clock.isoformat(),
         "main": budget.cashflow_view(s),
+        "total_balance": s.main_balance + sum(g.saved for g in s.goals.values())
+        + sum(o.reserved for o in s.obligations.values() if not o.paid),
+        "today_summary": {"spent": -sum(t["amount"] for t in today_tx if t["amount"] < 0),
+                          "income": sum(t["amount"] for t in today_tx if t["amount"] > 0),
+                          "daily_baseline": calc.DAILY_SPEND_BASELINE},
+        "proposals_pending": [proposals.view(p) for p in sorted(pend, key=lambda p: p.created_at, reverse=True)],
+        "last_salary": s.last_salary,
         "income": {"history": s.income_history, "worst": b.worst, "avg": calc.round_money(b.avg),
                    "next_income_date": s.next_income_date.isoformat()},
-        "goals": [goals.view(s, g) for g in s.goals.values() if g.status in ("active", "completed", "closing")],
+        "goals": [goals.view(s, g) for g in goal_list],
         "used_percent": budget.used_percent(s),
         "limits": {"max_goals": calc.MAX_SUBCARDS, "max_total_percent": calc.MAX_TOTAL_PERCENT,
                    "discipline_rate": calc.DISCIPLINE_RATE, "base_rate": calc.BASE_RATE,
@@ -194,6 +209,13 @@ def create_subcard(body: GoalIn):
         g = goals.create(STORE.state, body.name, body.amount, body.percent)
         agent.agent_review(STORE.state)
         return goals.view(STORE.state, g)
+
+
+@app.post("/subcards/reorder")
+def reorder_subcards(body: ReorderIn):
+    with STORE.lock:
+        gs = goals.reorder(STORE.state, body.ids)
+        return [goals.view(STORE.state, g) for g in gs]
 
 
 @app.get("/subcards/{goal_id}")
@@ -270,7 +292,7 @@ def agent_chat(body: ChatIn):
         return JSONResponse(status_code=429, content={"detail": "Слишком много сообщений. Подождите минуту."})
     _chat_hits.append(now)
     with STORE.lock:
-        return agent.chat(STORE.state, body.message, [t.model_dump() for t in body.history])
+        return agent.chat(STORE.state, body.message, [t.model_dump() for t in body.history], body.lang)
 
 
 @app.get("/agent/inbox")

@@ -45,7 +45,7 @@ def topup(s: State, obl_id: str, amount: int) -> int:
         raise CalcError("Пополнять нечего или на основной карте нет денег")
     s.main_balance -= amount
     o.reserved += amount
-    s.add_tx(f"В резерв «{o.name}»", -amount)
+    s.add_tx(f"В резерв «{o.name}»", -amount, internal=True)
     return amount
 
 

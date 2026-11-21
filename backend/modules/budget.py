@@ -10,7 +10,17 @@ def basis(s: State) -> calc.IncomeBasis:
 
 
 def active_goals(s: State):
-    return [g for g in s.goals.values() if g.status == "active"]
+    """Active goals in priority order (1 = highest)."""
+    return sorted((g for g in s.goals.values() if g.status == "active"), key=lambda g: (g.priority or 99, g.id))
+
+
+def renumber(s: State) -> None:
+    """Priorities 1..n without gaps among active goals; 0 for everything else."""
+    for g in s.goals.values():
+        if g.status != "active":
+            g.priority = 0
+    for i, g in enumerate(active_goals(s), start=1):
+        g.priority = i
 
 
 def goal_percents(s: State, exclude: str | None = None) -> list[int]:
