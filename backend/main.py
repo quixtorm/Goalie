@@ -1,0 +1,327 @@
+"""FastAPI routes. No math here — everything goes through modules/ and calc.py."""
+from __future__ import annotations
+
+import logging
+import os
+import time
+from collections import deque
+from datetime import date
+from typing import Literal
+
+from dotenv import load_dotenv
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
+
+import agent  # noqa: E402
+import calc  # noqa: E402
+import mcc as mcc_mod  # noqa: E402
+from calc import CalcError  # noqa: E402
+from mock_data import seed  # noqa: E402
+from modules import budget, goals, guardian, obligations, proposals  # noqa: E402
+from state import Store  # noqa: E402
+
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger("api")
+
+STORE = Store(seed)
+DEMO_MODE = os.getenv("DEMO_MODE", "false").lower() == "true"
+
+app = FastAPI(title="Мечта и Щит — демо", docs_url="/docs" if DEMO_MODE else None, redoc_url=None)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
+)
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    resp = await call_next(request)
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    resp.headers["X-Frame-Options"] = "DENY"
+    resp.headers["Referrer-Policy"] = "no-referrer"
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+@app.exception_handler(CalcError)
+async def calc_error(_: Request, e: CalcError):
+    return JSONResponse(status_code=422, content={"detail": str(e)})
+
+
+@app.exception_handler(KeyError)
+async def not_found(_: Request, e: KeyError):
+    return JSONResponse(status_code=404, content={"detail": e.args[0] if e.args else "Не найдено"})
+
+
+@app.exception_handler(RequestValidationError)
+async def bad_input(_: Request, e: RequestValidationError):
+    fields = sorted({str(err["loc"][-1]) for err in e.errors() if err.get("loc")})
+    return JSONResponse(status_code=422, content={"detail": "Проверьте введённые данные", "fields": fields})
+
+
+@app.exception_handler(Exception)
+async def internal(_: Request, e: Exception):
+    log.error("Unhandled error: %s", type(e).__name__)
+    return JSONResponse(status_code=500, content={"detail": "Что-то пошло не так. Попробуйте ещё раз."})
+
+
+# ---- input models (bounded, no unknown fields) ----
+Money = Field(gt=0, le=calc.MAX_AMOUNT)
+Name = Field(min_length=1, max_length=100)
+
+
+class Strict(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+
+class GoalIn(Strict):
+    name: str = Name
+    amount: int = Money
+    percent: int = Field(ge=calc.MIN_PERCENT, le=calc.MAX_TOTAL_PERCENT)
+
+
+class ObligationIn(Strict):
+    name: str = Name
+    amount: int = Money
+    due_date: date
+    monthly: bool = False
+
+
+class ConfirmIn(Strict):
+    confirm: bool = False
+
+
+class SpendIn(Strict):
+    source_id: str = Field(min_length=1, max_length=40)
+    amount: int = Money
+    mcc: str = Field(pattern=r"^\d{4}$")
+    merchant: str = Name
+    note: str = Field(default="", max_length=100)
+
+
+class ResolveIn(Strict):
+    option: Literal["cover_from_main", "cooling", "proceed", "decline"]
+    confirm: bool = False
+
+
+class ProposalIn(Strict):
+    option: str | None = Field(default=None, max_length=40)
+
+
+class ChatTurn(Strict):
+    role: Literal["user", "assistant"]
+    content: str = Field(max_length=4000)
+
+
+class ChatIn(Strict):
+    message: str = Field(min_length=1, max_length=1000)
+    history: list[ChatTurn] = Field(default_factory=list, max_length=20)
+
+
+class SalaryIn(Strict):
+    amount: int = Money
+
+
+class SkipIn(Strict):
+    hours: int = Field(ge=1, le=720)
+
+
+# ---- views ----
+def state_view() -> dict:
+    s = STORE.state
+    b = budget.basis(s)
+    pend = [p for p in s.proposals.values() if p.status == "pending"]
+    return {
+        "today": s.today.isoformat(),
+        "clock": s.clock.isoformat(),
+        "main": budget.cashflow_view(s),
+        "income": {"history": s.income_history, "worst": b.worst, "avg": calc.round_money(b.avg),
+                   "next_income_date": s.next_income_date.isoformat()},
+        "goals": [goals.view(s, g) for g in s.goals.values() if g.status in ("active", "completed", "closing")],
+        "used_percent": budget.used_percent(s),
+        "limits": {"max_goals": calc.MAX_SUBCARDS, "max_total_percent": calc.MAX_TOTAL_PERCENT,
+                   "discipline_rate": calc.DISCIPLINE_RATE, "base_rate": calc.BASE_RATE,
+                   "cooldown_hours": calc.COOLDOWN_HOURS},
+        "obligations": sorted([obligations.view(s, o) for o in s.obligations.values() if not o.paid],
+                              key=lambda x: x["due_date"]),
+        "inbox_count": len(pend),
+        "stops": [{"id": st.id, "status": st.status, "options": guardian.options_for(st), **st.numbers}
+                  for st in s.stops.values() if st.status in ("open", "cooling")],
+        "transactions": s.transactions[:15],
+        "demo_mode": DEMO_MODE,
+    }
+
+
+# ---- routes ----
+@app.get("/state")
+def get_state():
+    with STORE.lock:
+        agent.agent_review(STORE.state)
+        return state_view()
+
+
+@app.get("/mcc")
+def mcc_list():
+    return [{"mcc": k, "label": v[1], "category": v[0].value} for k, v in mcc_mod.MCC_TABLE.items()]
+
+
+@app.get("/calc/preview")
+def calc_preview(amount: int, percent: int):
+    if not (0 < amount <= calc.MAX_AMOUNT) or not (1 <= percent <= calc.MAX_TOTAL_PERCENT):
+        raise CalcError("Проверьте сумму и процент")
+    with STORE.lock:
+        return goals.preview(STORE.state, amount, percent)
+
+
+@app.get("/calc/suggest")
+def calc_suggest(amount: int, months: int):
+    if not (0 < amount <= calc.MAX_AMOUNT) or not (1 <= months <= calc.MAX_MONTHS):
+        raise CalcError("Проверьте сумму и срок")
+    with STORE.lock:
+        return goals.suggest(STORE.state, amount, months)
+
+
+@app.post("/subcards")
+def create_subcard(body: GoalIn):
+    with STORE.lock:
+        g = goals.create(STORE.state, body.name, body.amount, body.percent)
+        agent.agent_review(STORE.state)
+        return goals.view(STORE.state, g)
+
+
+@app.get("/subcards/{goal_id}")
+def get_subcard(goal_id: str):
+    with STORE.lock:
+        return goals.view(STORE.state, goals.get(STORE.state, goal_id))
+
+
+@app.post("/subcards/{goal_id}/use")
+def use_subcard(goal_id: str):
+    with STORE.lock:
+        return goals.use(STORE.state, goal_id)
+
+
+@app.post("/subcards/{goal_id}/cancel")
+def cancel_subcard(goal_id: str, body: ConfirmIn):
+    if not body.confirm:
+        raise CalcError("Нужно подтверждение")
+    with STORE.lock:
+        return goals.start_close(STORE.state, goal_id)
+
+
+@app.get("/obligations")
+def list_obligations():
+    with STORE.lock:
+        return state_view()["obligations"]
+
+
+@app.post("/obligations")
+def create_obligation(body: ObligationIn):
+    with STORE.lock:
+        o = obligations.create(STORE.state, body.name, body.amount, body.due_date, body.monthly)
+        agent.agent_review(STORE.state)
+        return obligations.view(STORE.state, o)
+
+
+@app.post("/obligations/{obl_id}/pay")
+def pay_obligation(obl_id: str, body: ConfirmIn):
+    if not body.confirm:
+        raise CalcError("Нужно подтверждение")
+    with STORE.lock:
+        res = obligations.pay(STORE.state, obl_id)
+        agent.agent_review(STORE.state)
+        return res
+
+
+@app.post("/spend")
+def spend(body: SpendIn):
+    with STORE.lock:
+        res = guardian.spend(STORE.state, body.source_id, body.amount, body.mcc, body.merchant, body.note)
+        agent.agent_review(STORE.state)
+        return res
+
+
+@app.post("/spend/{stop_id}/resolve")
+def resolve_stop(stop_id: str, body: ResolveIn):
+    with STORE.lock:
+        res = guardian.resolve(STORE.state, stop_id, body.option, body.confirm)
+        agent.agent_review(STORE.state)
+        return res
+
+
+# simple in-memory rate limit for the paid LLM endpoint
+_chat_hits: deque[float] = deque()
+CHAT_LIMIT_PER_MIN = 20
+
+
+@app.post("/agent/chat")
+def agent_chat(body: ChatIn):
+    now = time.monotonic()
+    while _chat_hits and now - _chat_hits[0] > 60:
+        _chat_hits.popleft()
+    if len(_chat_hits) >= CHAT_LIMIT_PER_MIN:
+        return JSONResponse(status_code=429, content={"detail": "Слишком много сообщений. Подождите минуту."})
+    _chat_hits.append(now)
+    with STORE.lock:
+        return agent.chat(STORE.state, body.message, [t.model_dump() for t in body.history])
+
+
+@app.get("/agent/inbox")
+def inbox():
+    with STORE.lock:
+        agent.agent_review(STORE.state)
+        ps = sorted(STORE.state.proposals.values(), key=lambda p: p.created_at, reverse=True)
+        return [proposals.view(p) for p in ps if p.status == "pending" or p.origin == "agent"][:30]
+
+
+@app.post("/agent/proposals/{pid}/confirm")
+def confirm_proposal(pid: str, body: ProposalIn | None = None):
+    with STORE.lock:
+        return proposals.apply(STORE.state, pid, body.option if body else None)
+
+
+@app.post("/agent/proposals/{pid}/reject")
+def reject_proposal(pid: str):
+    with STORE.lock:
+        return proposals.reject(STORE.state, pid)
+
+
+# ---- demo controls (DEMO_MODE only) ----
+def _demo_guard():
+    if not DEMO_MODE:
+        raise KeyError("Не найдено")
+
+
+@app.post("/demo/salary")
+def demo_salary(body: SalaryIn):
+    _demo_guard()
+    with STORE.lock:
+        return proposals.salary(STORE.state, body.amount)
+
+
+@app.post("/demo/skip-time")
+def demo_skip(body: SkipIn):
+    _demo_guard()
+    with STORE.lock:
+        proposals.skip_time(STORE.state, body.hours)
+        return {"clock": STORE.state.clock.isoformat()}
+
+
+@app.post("/demo/purchase")
+def demo_purchase(body: SpendIn):
+    _demo_guard()
+    return spend(body)
+
+
+@app.post("/demo/reset")
+def demo_reset():
+    _demo_guard()
+    STORE.reset()
+    return {"ok": True}
