@@ -36,6 +36,7 @@ def chat(s: State, message: str, history: list[dict]) -> dict:
 
     # 2. LLM, if configured
     if os.getenv("ANTHROPIC_API_KEY", "").strip():
+        before = set(s.proposals)
         try:
             import llm
             out = llm.chat(s, message, history)
@@ -43,6 +44,10 @@ def chat(s: State, message: str, history: list[dict]) -> dict:
                 return {**out, "source": "llm"}
         except Exception as e:  # never break the demo; never leak details
             log.warning("LLM failed, using fallback: %s", type(e).__name__)
+        # LLM gave up midway: withdraw any proposal it created so the fallback doesn't duplicate it
+        for pid in set(s.proposals) - before:
+            if s.proposals[pid].status == "pending":
+                s.proposals[pid].status = "resolved"
 
     # 3. deterministic fallback
     out = fallback.reply(s, message)
