@@ -31,8 +31,9 @@ async function request(method, path, body) {
 export const api = {
   state: () => request('GET', '/state'),
   mcc: () => request('GET', '/mcc'),
-  preview: (amount, percent) => request('GET', `/calc/preview?amount=${amount}&percent=${percent}`),
-  createGoal: (b) => request('POST', '/subcards', b),
+  // The app never sends a percent: the server/agent chooses it.
+  planGoal: (name, goal_amount, term_months) => request('POST', '/subcards/plan', { name, goal_amount, ...(term_months ? { term_months } : {}) }),
+  createGoal: (name, goal_amount, term_months) => request('POST', '/subcards', { name, goal_amount, ...(term_months ? { term_months } : {}) }),
   useGoal: (id) => request('POST', `/subcards/${encodeURIComponent(id)}/use`),
   closeGoal: (id) => request('POST', `/subcards/${encodeURIComponent(id)}/cancel`, { confirm: true }),
   createObligation: (b) => request('POST', '/obligations', b),

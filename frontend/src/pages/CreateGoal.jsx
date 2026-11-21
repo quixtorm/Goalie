@@ -1,33 +1,42 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api } from '../api'
 import { useApp } from '../ctx'
-import { date, digitsOnly, groupDigits, months, uzs } from '../format'
+import { date, digitsOnly, groupDigits, uzs } from '../format'
 import BankCard from '../components/BankCard'
-import { BackButton, ConfirmSheet, Icon, Money, Row, SalaryOnlyNote } from '../components/ui'
+import { BackButton, ConfirmSheet, Icon, Money, SalaryOnlyNote } from '../components/ui'
+
+// The user enters ONLY a name and an amount (optional term). The agent chooses the percent of salary on the
+// server (/subcards/plan); it is shown read-only. There is no percent control anywhere.
+const TERMS = [null, 12, 24, 36, 60]
 
 export default function CreateGoal() {
   const { state, t, lang, go, notify, refresh, openAgent } = useApp()
-  const cap = state.limits.max_total_percent - state.used_percent
   const [name, setName] = useState('')
   const [amount, setAmount] = useState(0)
-  const [percent, setPercent] = useState(Math.min(10, Math.max(1, cap)))
-  const [pv, setPv] = useState(null)
+  const [term, setTerm] = useState(null) // null = "Агент подберёт"
+  const [plan, setPlan] = useState(null)
+  const [loading, setLoading] = useState(false)
   const [err, setErr] = useState(null)
   const [confirm, setConfirm] = useState(false)
   const [busy, setBusy] = useState(false)
   const [issued, setIssued] = useState(null)
+  const reqId = useRef(0)
 
+  const ready = name.trim().length > 0 && amount > 0
+
+  // auto-plan: 400 ms after name/amount/term change, ask the agent
   useEffect(() => {
-    if (!amount || cap < 1) { setPv(null); return }
+    if (!ready) { setPlan(null); setErr(null); setLoading(false); return }
+    setLoading(true)
+    const id = ++reqId.current
     const tm = setTimeout(() => {
-      api.preview(amount, percent).then((r) => { setPv(r); setErr(null) }).catch((e) => { setPv(null); setErr(e.message) })
-    }, 250)
+      api.planGoal(name.trim(), amount, term)
+        .then((p) => { if (id === reqId.current) { setPlan(p); setErr(null) } })
+        .catch((e) => { if (id === reqId.current) { setPlan(null); setErr(e.message) } })
+        .finally(() => { if (id === reqId.current) setLoading(false) })
+    }, 400)
     return () => clearTimeout(tm)
-  }, [amount, percent, cap])
-
-  const ask = () => openAgent({
-    send: amount ? t('askAgentGoal', uzs(amount), name.trim() || t('newGoal').toLowerCase()) : t('askAgentEmpty'),
-  })
+  }, [name, amount, term, ready, lang])
 
   if (issued) {
     return (
@@ -38,7 +47,8 @@ export default function CreateGoal() {
     )
   }
 
-  if (cap < 1 || state.goals.filter((g) => g.status === 'active').length >= state.limits.max_goals) {
+  if (state.goals.filter((g) => g.status === 'active').length >= state.limits.max_goals
+      || state.used_percent >= state.limits.max_total_percent) {
     return (
       <div className="space-y-4 pt-4">
         <BackButton onClick={() => go('goals')} />
@@ -50,9 +60,9 @@ export default function CreateGoal() {
   async function create() {
     setBusy(true)
     try {
-      const g = await api.createGoal({ name: name.trim(), amount, percent })
+      const g = await api.createGoal(name.trim(), amount, term) // no percent: the server recomputes it
       setConfirm(false)
-      setIssued(g) // card-issue animation, then go to the goals list
+      setIssued(g)
       refresh()
       setTimeout(() => { notify({ text: t('issued') }); go('goal', { id: g.id }) }, 1500)
     } catch (e) {
@@ -63,28 +73,56 @@ export default function CreateGoal() {
     }
   }
 
-  const valid = name.trim() && amount > 0 && pv
-  // live card preview: the card being "issued" while the user types
+  // live card preview: name, amount, agent percent and deadline
   const preview = {
-    name: name.trim(), saved: 0, amount, percent, progress: 0, status: 'active',
-    priority: state.goals.filter((x) => x.status === 'active').length + 1, expiry: pv?.expiry,
+    name: name.trim(), saved: 0, amount, percent: plan?.percent ?? 0, progress: 0, status: 'active',
+    priority: state.goals.filter((x) => x.status === 'active').length + 1, expiry: plan?.expiry,
   }
+  const termLabel = (m) => (m ? t('termN', m) : t('termAuto'))
 
   return (
-    <div className="space-y-5 pt-4">
+    <div className="space-y-5 pt-4 pb-28">
       <BackButton onClick={() => go('goals')} />
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">{t('newGoal')}</h1>
-        <button className="press inline-flex items-center gap-1.5 rounded-full bg-amber-300/15 text-amber-200 border border-amber-300/30 px-4 min-h-[44px] font-semibold"
-          onClick={ask}>
-          <Icon name="sparkle" size={18} fill strokeWidth={0} /> {t('askAgent')}
-        </button>
-      </div>
+      <h1 className="text-2xl font-bold">{t('newGoal')}</h1>
 
-      <section aria-label={t('yourCard')}>
-        <BankCard goal={preview} tilt={false} />
+      <section aria-label={t('yourCard')}><BankCard goal={preview} tilt={false} /></section>
+
+      {/* agent panel: read-only result */}
+      <section className="card !p-4" aria-live="polite">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-300 to-brand grid place-items-center text-white">
+            <Icon name="sparkle" size={16} fill strokeWidth={0} />
+          </span>
+          <span className="font-bold">{t('agentPlan')}</span>
+        </div>
+        {!ready && <p className="text-muted text-sm">{t('agentWaiting')}</p>}
+        {ready && loading && (
+          <p className="text-muted flex items-center gap-2" role="status">
+            <span className="flex gap-1">{[0, 1, 2].map((d) => <span key={d} className="w-2 h-2 rounded-full bg-muted animate-pulse" style={{ animationDelay: `${d * 150}ms` }} />)}</span>
+            {t('agentCalc')}
+          </p>
+        )}
+        {ready && !loading && err && <p className="text-rose-300">⚠ {err}</p>}
+        {ready && !loading && plan && (
+          <div className="animate-rise">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-3xl font-extrabold num">{t('pctOfSalary', plan.percent)}</span>
+              <span className="rounded-full border border-amber-300/40 bg-amber-300/15 text-amber-200 text-xs font-semibold px-2.5 py-1">
+                ✦ {t('pickedByAgent')}
+              </span>
+            </div>
+            <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+              <dt className="text-muted">{t('monthlyWorst')}</dt><dd className="text-right font-semibold"><Money value={plan.contribution_worst} /></dd>
+              <dt className="text-muted">{t('expiryWorst')}</dt><dd className="text-right font-semibold">{t('until', date(plan.expiry, lang))}</dd>
+              <dt className="text-muted">{t('bestCase')}</dt><dd className="text-right">{t('until', date(plan.best_date, lang))}</dd>
+            </dl>
+            <p className="mt-3 text-ink/90">{plan.explanation}</p>
+            <SalaryOnlyNote worstAnnual={state.income.worst_annual} />
+          </div>
+        )}
       </section>
 
+      {/* inputs: name, amount, optional term. NO percent. */}
       <section className="card space-y-4">
         <div>
           <label className="label" htmlFor="gname">{t('whatFor')}</label>
@@ -97,31 +135,31 @@ export default function CreateGoal() {
             value={groupDigits(amount)} onChange={(e) => setAmount(digitsOnly(e.target.value))} />
         </div>
         <div>
-          <label className="label" htmlFor="gpct">{t('howPct')}: <b className="text-ink text-base">{percent}%</b></label>
-          <input id="gpct" type="range" min={1} max={cap} value={percent} className="w-full h-11 accent-[#2E7BD6]"
-            onChange={(e) => setPercent(Number(e.target.value))} />
-          <div className="flex justify-between text-sm text-muted"><span>1%</span><span>{cap}% ({t('max')})</span></div>
+          <p className="label">{t('termLabel')}</p>
+          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={t('termLabel')}>
+            {TERMS.map((m) => (
+              <button key={m ?? 'auto'} role="radio" aria-checked={term === m} onClick={() => setTerm(m)}
+                className={`press rounded-full px-4 min-h-[40px] text-sm font-semibold border ${term === m ? 'bg-brand text-white border-brand' : 'bg-card2 text-ink/90 border-line'}`}>
+                {m === null && '✦ '}{termLabel(m)}
+              </button>
+            ))}
+          </div>
         </div>
+        <button className="btn-link !px-0" onClick={() => openAgent({ send: ready ? t('askAgentGoal', uzs(amount), name.trim()) : t('askAgentEmpty') })}>
+          <Icon name="sparkle" size={16} fill strokeWidth={0} /> {t('askAgent')}
+        </button>
       </section>
 
-      {pv && (
-        <section className="card !py-2 animate-rise">
-          <h2 className="font-bold pt-2">{t('forecast')}</h2>
-          <Row label={t('perMonth')}>≈ <Money value={pv.contribution_worst} /></Row>
-          <Row label={t('bestCase')}>≈ {months(pv.months_best, lang)}</Row>
-          <Row label={t('worstCase')}>≈ {months(pv.months_worst, lang)}</Row>
-          <Row label={t('deadline')} strong>{t('until', date(pv.expiry, lang))}</Row>
-          <div className="pb-3"><SalaryOnlyNote worstAnnual={state.income.worst_annual} /></div>
-        </section>
-      )}
-      {!pv && <SalaryOnlyNote worstAnnual={state.income.worst_annual} />}
-      {err && <p className="text-rose-300">⚠ {err}</p>}
-
-      <button className="btn-primary w-full !min-h-[56px] text-lg" disabled={!valid} onClick={() => setConfirm(true)}>{t('create')}</button>
+      {/* sticky create button (the tab bar is hidden on this screen) */}
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-[420px] px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] bg-gradient-to-t from-bg via-bg/95 to-transparent">
+        <button className="btn-primary w-full !min-h-[56px] text-lg" disabled={!plan || loading} onClick={() => setConfirm(true)}>
+          {t('create')}
+        </button>
+      </div>
 
       <ConfirmSheet open={confirm} onClose={() => setConfirm(false)} busy={busy}
         title={t('createTitle', name.trim())}
-        text={`${t('createText', percent)}\n\n🔒 ${t('lockFull')}`}
+        text={plan ? `${t('createText', plan.percent, t('until', date(plan.expiry, lang)))}\n\n🔒 ${t('lockFull')}` : ''}
         confirmLabel={t('createOk')} onConfirm={create} />
     </div>
   )

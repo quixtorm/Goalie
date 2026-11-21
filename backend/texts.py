@@ -145,6 +145,20 @@ T: dict[str, tuple[str, str]] = {
     "p_newobl_text": ("Добавить обязательный платёж {amount_sum} до {due_date}.",
                       "{due_date} gacha {amount_sum} majburiy to'lov qo'shish."),
     "p_add_obl": ("Добавить платёж", "To'lov qo'shish"),
+    "plan_why_term": ("Чтобы успеть за {term_months} даже в самый слабый месяц, хватит {pct}% зарплаты.",
+                      "Eng past maosh oyida ham {term_months}da ulgurish uchun maoshning {pct}% i yetadi."),
+    "plan_why_term_capped": ("За {term_months} не успеть: на все цели можно не больше {cap}% зарплаты. Я взял "
+                             "максимум — {pct}%, тогда цель займёт {worst_months}.",
+                             "{term_months}da ulgurib bo'lmaydi: barcha maqsadlarga maoshning ko'pi bilan {cap}% i. "
+                             "Maksimumni — {pct}% oldim, unda maqsad {worst_months} davom etadi."),
+    "plan_why_auto": ("Я подобрал {pct}% зарплаты: так цель соберётся примерно за {worst_months} даже в самый слабый "
+                      "месяц, и на жизнь останется достаточно.",
+                      "Maoshning {pct}% ini tanladim: shunda maqsad eng past oyda ham taxminan {worst_months}da "
+                      "yig'iladi va yashash uchun yetarli pul qoladi."),
+    "plan_why_auto_capped": ("Я подобрал максимум — {pct}% зарплаты (на все цели не больше {cap}%). Даже в самый "
+                             "слабый месяц цель соберётся за {worst_months}.",
+                             "Maksimumni tanladim — maoshning {pct}% i (barcha maqsadlarga ko'pi bilan {cap}%). Eng "
+                             "past oyda ham maqsad {worst_months}da yig'iladi."),
     "p_tr_title": ("Пришло {amount_sum} от: {source}", "{source}dan {amount_sum} keldi"),
     "p_tr_text": ("Отложить часть на цель «{name}»? Предлагаю {pct}% от перевода — {sug_sum}. "
                   "План и сроки от этого не меняются: они считаются только по зарплате.",

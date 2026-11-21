@@ -13,7 +13,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
@@ -100,9 +100,12 @@ class Strict(BaseModel):
 
 
 class GoalIn(Strict):
+    """New goal from the app. The user never chooses a percent: the server computes it (goals.plan).
+    `percent` is accepted only so old clients don't fail, and is IGNORED."""
     name: str = Name
-    amount: int = Money
-    percent: int = Field(ge=calc.MIN_PERCENT, le=calc.MAX_TOTAL_PERCENT)
+    goal_amount: int = Field(gt=0, le=calc.MAX_AMOUNT, validation_alias=AliasChoices("goal_amount", "amount"))
+    term_months: int | None = Field(default=None, ge=1, le=calc.MAX_MONTHS)
+    percent: int | None = Field(default=None, exclude=True)  # ignored on purpose
 
 
 class ObligationIn(Strict):
@@ -214,14 +217,6 @@ def mcc_list():
     return [{"mcc": k, "label": mcc_mod.label(k), "category": v[0].value} for k, v in mcc_mod.MCC_TABLE.items()]
 
 
-@app.get("/calc/preview")
-def calc_preview(amount: int, percent: int):
-    if not (0 < amount <= calc.MAX_AMOUNT) or not (1 <= percent <= calc.MAX_TOTAL_PERCENT):
-        raise CalcError(tr("err_check_amount_pct"))
-    with STORE.lock:
-        return goals.preview(STORE.state, amount, percent)
-
-
 @app.get("/calc/suggest")
 def calc_suggest(amount: int, months: int):
     if not (0 < amount <= calc.MAX_AMOUNT) or not (1 <= months <= calc.MAX_MONTHS):
@@ -230,10 +225,18 @@ def calc_suggest(amount: int, months: int):
         return goals.suggest(STORE.state, amount, months)
 
 
+@app.post("/subcards/plan")
+def plan_subcard(body: GoalIn):
+    """Agent-chosen percent + forecast for a new goal (read-only preview; body.percent is ignored)."""
+    with STORE.lock:
+        return goals.plan(STORE.state, body.name, body.goal_amount, body.term_months)
+
+
 @app.post("/subcards")
 def create_subcard(body: GoalIn):
+    """Create a goal; the SERVER recomputes the percent (body.percent is ignored)."""
     with STORE.lock:
-        g = goals.create(STORE.state, body.name, body.amount, body.percent)
+        g = goals.create_planned(STORE.state, body.name, body.goal_amount, body.term_months)
         agent.agent_review(STORE.state)
         return goals.view(STORE.state, g)
 

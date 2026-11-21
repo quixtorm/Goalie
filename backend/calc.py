@@ -199,6 +199,32 @@ def suggest_percent(remaining: int, target_months: int, used_percent: int, basis
     )
 
 
+AUTO_TARGET_MONTHS = 24  # when the user does not pick a term, the agent aims to finish in about 2 years
+
+
+@dataclass(frozen=True)
+class AutoPlan:
+    percent: int
+    mode: str             # "term" | "term_capped" | "auto" | "auto_capped"
+    target_months: int
+    months_worst: int
+    months_best: int
+    cap: int
+
+
+def auto_plan(goal_amount: int, term_months: int | None, used_percent: int, basis: IncomeBasis) -> AutoPlan:
+    """The AGENT chooses the percent of salary (the user never does).
+    - with a term: the smallest percent that finishes within the term (worst salary), capped by the 40% limit;
+    - without a term: the smallest percent that finishes in about AUTO_TARGET_MONTHS, capped the same way."""
+    target = term_months or AUTO_TARGET_MONTHS
+    sp = suggest_percent(goal_amount, target, used_percent, basis)
+    if term_months:
+        mode = "term" if sp.feasible else "term_capped"
+    else:
+        mode = "auto" if sp.feasible else "auto_capped"
+    return AutoPlan(sp.percent, mode, target, sp.months_worst, sp.months_best, sp.cap)
+
+
 def validate_new_goal(existing_count: int, percent: int, used_percent: int, amount: int) -> None:
     if existing_count >= MAX_SUBCARDS:
         raise CalcError(tr("err_max_goals", max=MAX_SUBCARDS))

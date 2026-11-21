@@ -55,6 +55,35 @@ def suggest(s: State, amount: int, months: int, exclude: str | None = None) -> d
     return out
 
 
+def plan(s: State, name: str, goal_amount: int, term_months: int | None) -> dict:
+    """Agent-chosen plan for a new goal. The percent is computed here, never taken from the client."""
+    if len(budget.active_goals(s)) >= calc.MAX_SUBCARDS:
+        raise CalcError(tr("err_max_goals", max=calc.MAX_SUBCARDS))
+    if goal_amount <= 0 or goal_amount > calc.MAX_AMOUNT:
+        raise CalcError(tr("err_goal_amount"))
+    b = budget.basis(s)
+    ap = calc.auto_plan(goal_amount, term_months, budget.used_percent(s), b)
+    expiry = calc.add_months(s.today, ap.months_worst)
+    why = {"term": "plan_why_term", "term_capped": "plan_why_term_capped",
+           "auto": "plan_why_auto", "auto_capped": "plan_why_auto_capped"}[ap.mode]
+    return {
+        "name": name, "goal_amount": goal_amount, "term_months": term_months, "percent": ap.percent,
+        "mode": ap.mode, "feasible": ap.mode in ("term", "auto"),
+        "contribution_worst": calc.round_money(calc.monthly_contribution(ap.percent, b.worst)),
+        "months_worst": ap.months_worst, "months_best": ap.months_best,
+        "expiry": expiry.isoformat(), "best_date": calc.add_months(s.today, ap.months_best).isoformat(),
+        "cap_percent": ap.cap, "max_total_percent": calc.MAX_TOTAL_PERCENT,
+        "explanation": tr(why, pct=ap.percent, term_months=ap.target_months, worst_months=ap.months_worst,
+                          cap=calc.MAX_TOTAL_PERCENT),
+    }
+
+
+def create_planned(s: State, name: str, goal_amount: int, term_months: int | None) -> Goal:
+    """Create a goal with the percent the SERVER computes (same as plan())."""
+    p = plan(s, name, goal_amount, term_months)
+    return create(s, name, goal_amount, p["percent"])
+
+
 def create(s: State, name: str, amount: int, percent: int) -> Goal:
     calc.validate_new_goal(len(budget.active_goals(s)), percent, budget.used_percent(s), amount)
     mw = calc.months_needed(amount, percent, budget.basis(s).worst)

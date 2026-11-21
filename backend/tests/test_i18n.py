@@ -73,9 +73,13 @@ def test_full_demo_in_uzbek_has_no_russian(c):
 
 
 def test_errors_in_uzbek(c):
-    r = c.post("/subcards", json={"name": "A", "amount": 1_000_000, "percent": 35}, headers=UZ)
-    assert r.status_code == 422 and "40%" in r.json()["detail"]
+    # the client can no longer choose a percent, so test the goal-count limit instead
+    c.post("/subcards", json={"name": "A", "goal_amount": 1_000_000}, headers=UZ)
+    c.post("/subcards", json={"name": "B", "goal_amount": 1_000_000}, headers=UZ)
+    r = c.post("/subcards", json={"name": "C", "goal_amount": 1_000_000}, headers=UZ)
+    assert r.status_code == 422 and "3 tadan" in r.json()["detail"]
     no_cyrillic(r)
+    no_cyrillic(c.post("/subcards/plan", json={"name": "D", "goal_amount": 1_000_000}, headers=UZ))
     no_cyrillic(c.get("/subcards/nope", headers=UZ))
     no_cyrillic(c.post("/demo/salary", json={"amount": -1}, headers=UZ))
 

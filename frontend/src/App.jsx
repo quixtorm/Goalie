@@ -66,7 +66,7 @@ export default function App() {
       <div className="mx-auto max-w-[420px] min-h-screen bg-bg relative overflow-x-clip">
         <Header />
         <main key={route.name + (route.id || '')} className="px-4 pb-32 animate-fade-in">{page}</main>
-        <TabBar active={tab} />
+        {route.name !== 'create' && <TabBar active={tab} />}
         <AgentSheet req={agentReq} onClose={() => setAgentReq(null)} chat={chat} setChat={setChat} />
         <GuardianSheet key={guardian ? guardian.stop_id || guardian.merchant + guardian.amount : 'none'} result={guardian}
           onClose={() => setGuardian(null)} />
