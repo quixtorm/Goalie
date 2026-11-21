@@ -1,4 +1,4 @@
-# SmartGoal — AI Financial Agent (hackathon demo)
+# Goalie — AI Financial Agent (hackathon demo)
 
 Banking-app feature for Uzbekistan: **goal sub-cards** ("Мечта"), an **obligations card** ("Щит") and an
 **AI Financial Agent** that runs *observe → calculate → propose → act only after confirmation*.
@@ -28,7 +28,7 @@ npm run dev
 ```
 Open http://127.0.0.1:5173, preferably in phone view (F12 → device toolbar).
 
-Tests (98 tests, ~8 s, no API key needed; `test_i18n.py` runs the whole demo in Uzbek and fails on any Russian text):
+Tests (116 tests, ~8 s, no API key needed; `test_i18n.py` runs the whole demo in Uzbek and fails on any Russian text):
 ```powershell
 cd backend
 .venv\Scripts\python.exe -m pytest -q
@@ -46,6 +46,7 @@ The AI agent opens from the header on every screen: the search field «Поис�
 | 2 | «Ещё» → demo panel → preset «−15%» (6 375 000) → «Зачислить» | Rent first, then goals by priority (Машина, then Телефон), rest to the main card: 14 898 750. 🔔 1 → «Цель «Машина» отстаёт» → «Поставить 22%» → back to 35 months. |
 | 3 | Same panel: purchase «#1 Машина», Кинотеатр (7832), 150 000 → «Оплатить картой» | ✋ Guardian sheet: goal delayed **3 days**, bonus lost over the next year **1 045 500 so'm** (22% → 12%). «Подождать до завтра». Then «Перемотать на 24 часа» → 🔔 «Прошли сутки…» → «Уже не нужно». |
 | 4 | Same panel: Аптека (5912), 300 000 → «Оплатить картой» | 💚 Paid with no penalty, 22% bonus kept, deadline unchanged. |
+| 4b | Same panel: Ресторан (5812), 100 000 → «Оплатить картой» → «Всё равно потратить» | 🔒 PIN sheet: wrong PIN «0000» → rejected, «осталось 2 попытки» (without a PIN the server returns 401). PIN **1234** → accepted, money spent. 🔔 «Вы подтвердили снятие 100 000 so'm… Это были не вы?» → «Отменить» → money back in the goal, 22% bonus restored. |
 | 5 | Home → quick action «Расчёт кредита» (or the chip) | 1 930 120 so'm/month, overpayment 3 161 437, 30% of income, ⚠ payment is bigger than free money (1 835 000), «Машина» 35 → 51 months. No bank recommendations. |
 | 6 | Tab «Платежи» → «＋ Добавить платёж»: «Долг брату», 1 500 000, 5 декабря 2026 | 🔔 / Home «AI-советник»: «Не хватает 1 500 000» → «Перевести 1 500 000 so'm» → status «✓ Хватает». |
 | 7 | «Ещё» → «Симулировать перевод от близких»: 2 000 000, «Семья» | Main card +2 000 000, chip «Перевод». «Машина»: percent, deadline and months **unchanged** (plan = salary only). 🔔 «Пришло 2 000 000 so'm от: Семья… Предлагаю 22% — 440 000 so'm» → «Отложить 440 000 so'm» → saved +440 000, deadline still the same. Ask the agent «Почему переводы не учитываются?» → it answers from `list_income_by_type`. |
@@ -102,6 +103,15 @@ Built into the demo:
 Dependency audit (21 Nov 2026):
 - `pip-audit`: no known vulnerabilities.
 - `npm audit`: one moderate advisory (GHSA-67mh-4wv8-2f99, esbuild inside the **Vite dev server only**). The fix needs Vite 8, a breaking upgrade. Mitigation: the dev server binds to 127.0.0.1 only, and the production build (`npm run build`) is static files that don't include esbuild.
+
+Step-up PIN (minimal, demo): only four actions need a PIN — «Использовать» (release a goal), «Всё равно потратить»
+after the Guardian (also the same button on the 24 h tip), «Закрыть досрочно» and the credit application. Viewing,
+creating goals and chatting never ask for it. `POST /auth/step-up {pin}` returns a 5-minute token (demo PIN **1234**,
+env `DEMO_STEP_UP_PIN`); 3 wrong PINs lock it for 60 s (423). The server rejects those four endpoints with **401**
+without a valid `X-Step-Up` token. Every such action adds a bell notice «Вы подтвердили … Это были не вы? Отменить»;
+«Отменить» reverses it during the 24 h hold, «Это был я» dismisses it. The token lives only in memory (never in storage).
+Tests: `tests/test_security_layer.py` (401s, lockout, expiry, cancel/undo, prompt injection in merchant/note,
+the agent can't create/apply anything by itself).
 
 In production this would also need (not built): real authentication with 2FA, encryption at rest, an audit log of every money movement, PCI DSS for card data, data localisation under Uzbekistan's personal-data law (ZRU-547), fraud monitoring, and a server-side session per user.
 

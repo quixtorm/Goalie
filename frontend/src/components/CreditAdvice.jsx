@@ -39,7 +39,7 @@ function ShareChip({ p }) {
 }
 
 function OfferCard({ o, amount, delay }) {
-  const { t, lang, notify, refresh } = useApp()
+  const { t, lang, notify, refresh, withStepUp } = useApp()
   const [open, setOpen] = useState(false)
   const [confirm, setConfirm] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -49,12 +49,12 @@ function OfferCard({ o, amount, delay }) {
   async function apply() {
     setBusy(true)
     try {
-      const r = await api.applyCredit(o.product_id, amount, o.months)
+      const r = await withStepUp((tok) => api.applyCredit(o.product_id, amount, o.months, tok))
       setDone(r.message)
       notify({ text: r.message, long: true })
       refresh()
     } catch (e) {
-      notify({ text: e.message, error: true })
+      if (!e.cancelled) notify({ text: e.message, error: true })
     } finally {
       setBusy(false)
       setConfirm(false)

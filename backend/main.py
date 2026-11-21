@@ -9,7 +9,7 @@ from datetime import date
 from typing import Literal
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Header, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -23,7 +23,7 @@ import fallback  # noqa: E402
 import mcc as mcc_mod  # noqa: E402
 from calc import CalcError  # noqa: E402
 from mock_data import seed  # noqa: E402
-from modules import budget, credits, goals, guardian, obligations, proposals  # noqa: E402
+from modules import budget, credits, goals, guardian, obligations, proposals, security  # noqa: E402
 from state import Store  # noqa: E402
 from texts import render, set_lang, tr  # noqa: E402
 
@@ -33,12 +33,12 @@ log = logging.getLogger("api")
 STORE = Store(seed)
 DEMO_MODE = os.getenv("DEMO_MODE", "false").lower() == "true"
 
-app = FastAPI(title="SmartGoal demo", docs_url="/docs" if DEMO_MODE else None, redoc_url=None)
+app = FastAPI(title="Goalie demo", docs_url="/docs" if DEMO_MODE else None, redoc_url=None)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type", "X-Lang"],
+    allow_headers=["Content-Type", "X-Lang", "X-Step-Up"],
 )
 
 
@@ -71,6 +71,23 @@ async def security_headers(request: Request, call_next):
 @app.exception_handler(CalcError)
 async def calc_error(_: Request, e: CalcError):
     return JSONResponse(status_code=422, content={"detail": str(e)})
+
+
+@app.exception_handler(security.StepUpRequired)
+async def step_up_required(_: Request, e: security.StepUpRequired):
+    return JSONResponse(status_code=401, content={"detail": tr("err_step_up"), "step_up": True})
+
+
+@app.exception_handler(security.WrongPin)
+async def wrong_pin(_: Request, e: security.WrongPin):
+    return JSONResponse(status_code=401, content={"detail": tr("err_wrong_pin", left=e.attempts_left),
+                                                  "attempts_left": e.attempts_left})
+
+
+@app.exception_handler(security.StepUpLocked)
+async def pin_locked(_: Request, e: security.StepUpLocked):
+    return JSONResponse(status_code=423, content={"detail": tr("err_pin_locked", sec=e.retry_after),
+                                                  "retry_after": e.retry_after})
 
 
 @app.exception_handler(KeyError)
@@ -246,11 +263,28 @@ def credits_advise(body: AdviseIn):
         return credits.advise(STORE.state, body.amount, body.term_months, body.goal_id)
 
 
-@app.post("/credits/apply")
-def credits_apply(body: CreditApplyIn):
-    """MOCK application: requires confirm=true, records it in state, moves no money."""
+class PinIn(Strict):
+    pin: str = Field(min_length=4, max_length=8, pattern=r"^\d+$")
+
+
+StepUp = Header(default=None, alias="X-Step-Up", max_length=100)
+
+
+@app.post("/auth/step-up")
+def auth_step_up(body: PinIn):
+    """Demo PIN -> 5-minute token for protected actions. 3 wrong PINs -> 60 s lock (423)."""
     with STORE.lock:
-        return credits.apply(STORE.state, body.product_id, body.amount, body.months, body.confirm)
+        return security.step_up(STORE.state, body.pin)
+
+
+@app.post("/credits/apply")
+def credits_apply(body: CreditApplyIn, x_step_up: str | None = StepUp):
+    """MOCK application: needs a step-up token AND confirm=true; records it, moves no money."""
+    with STORE.lock:
+        security.require(STORE.state, x_step_up)
+        res = security.apply_credit(STORE.state, body.product_id, body.amount, body.months, body.confirm)
+        agent.agent_review(STORE.state)
+        return res
 
 
 @app.post("/subcards/plan")
@@ -283,17 +317,25 @@ def get_subcard(goal_id: str):
 
 
 @app.post("/subcards/{goal_id}/use")
-def use_subcard(goal_id: str):
+def use_subcard(goal_id: str, x_step_up: str | None = StepUp):
+    """Releases locked money: step-up token required."""
     with STORE.lock:
-        return goals.use(STORE.state, goal_id)
+        security.require(STORE.state, x_step_up)
+        res = security.use_goal(STORE.state, goal_id)
+        agent.agent_review(STORE.state)
+        return res
 
 
 @app.post("/subcards/{goal_id}/cancel")
-def cancel_subcard(goal_id: str, body: ConfirmIn):
+def cancel_subcard(goal_id: str, body: ConfirmIn, x_step_up: str | None = StepUp):
+    """Early close: step-up token required."""
     if not body.confirm:
         raise CalcError(tr("err_need_confirm"))
     with STORE.lock:
-        return goals.start_close(STORE.state, goal_id)
+        security.require(STORE.state, x_step_up)
+        res = security.close_goal(STORE.state, goal_id)
+        agent.agent_review(STORE.state)
+        return res
 
 
 @app.get("/obligations")
@@ -329,9 +371,14 @@ def spend(body: SpendIn):
 
 
 @app.post("/spend/{stop_id}/resolve")
-def resolve_stop(stop_id: str, body: ResolveIn):
+def resolve_stop(stop_id: str, body: ResolveIn, x_step_up: str | None = StepUp):
+    """'proceed' (spend anyway) releases protected money: step-up token required. Other options don't."""
     with STORE.lock:
-        res = guardian.resolve(STORE.state, stop_id, body.option, body.confirm)
+        if body.option == "proceed":
+            security.require(STORE.state, x_step_up)
+            res = security.proceed(STORE.state, stop_id)
+        else:
+            res = guardian.resolve(STORE.state, stop_id, body.option, body.confirm)
         agent.agent_review(STORE.state)
         return res
 
@@ -363,9 +410,12 @@ def inbox():
 
 
 @app.post("/agent/proposals/{pid}/confirm")
-def confirm_proposal(pid: str, body: ProposalIn | None = None):
+def confirm_proposal(pid: str, body: ProposalIn | None = None, x_step_up: str | None = StepUp):
     with STORE.lock:
-        return proposals.apply(STORE.state, pid, body.option if body else None)
+        option = body.option if body else None
+        if proposals.needs_step_up(STORE.state, pid, option):  # "Всё равно из цели" after cooling-off
+            security.require(STORE.state, x_step_up)
+        return proposals.apply(STORE.state, pid, option)
 
 
 @app.post("/agent/proposals/{pid}/reject")

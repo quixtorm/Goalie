@@ -10,7 +10,7 @@ export default function More() {
         <span className="w-14 h-14 rounded-full bg-gradient-to-br from-brand to-brand-dark grid place-items-center text-white"><Icon name="user" size={28} /></span>
         <div>
           <p className="font-bold text-lg">{t('profile')}</p>
-          <p className="text-muted text-sm">SmartGoal · UZS</p>
+          <p className="text-muted text-sm">Goalie · UZS</p>
         </div>
       </section>
 

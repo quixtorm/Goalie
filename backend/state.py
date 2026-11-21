@@ -87,6 +87,9 @@ class State:
     transactions: list[dict[str, Any]] = field(default_factory=list)
     last_salary: dict[str, Any] | None = None
     credit_applications: list[dict[str, Any]] = field(default_factory=list)  # mock, demo only
+    # security layer: step-up PIN attempts/tokens (real-time expiry) and protected-action events (24 h cancel)
+    step_up: dict[str, Any] = field(default_factory=lambda: {"tokens": {}, "fails": 0, "locked_until": 0.0})
+    security_events: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def today(self) -> date:

@@ -1,4 +1,4 @@
-"""Automated demo video of the full SmartGoal scenario (QA tooling only — does not change the app).
+"""Automated demo video of the full Goalie scenario (QA tooling only — does not change the app).
 
 Prereqs: backend on http://127.0.0.1:8000 (DEMO_MODE=true) and frontend on http://127.0.0.1:5173 running.
 Run:     qa\\.venv\\Scripts\\python.exe qa\\record_demo.py
@@ -30,7 +30,7 @@ VIEW = {"width": 390, "height": 844}
 TYPE_DELAY = 40          # ms per character
 SLOW_MO = 150            # ms pause per visible user action (click). Applied in Recorder.click instead of
                          # Playwright's slow_mo, which would add it to every internal call (~10 per click).
-PAUSE_SCALE = 0.75       # all reading pauses x0.75 -> full scenario under 3 minutes
+PAUSE_SCALE = 0.58       # all reading pauses x0.58 -> full scenario (11 steps) under 3 minutes
 sys.stdout.reconfigure(encoding="utf-8")
 
 # ---------- overlay: fake cursor + caption bar (injected into every page) ----------
@@ -331,6 +331,39 @@ def scenario(r: Recorder):
         r.pause(3)
         r.click(r.btn("Хорошо"))
 
+    def pin_release():
+        r.close_sheets()
+        r.click(r.tab("Ещё"))
+        r.show(p.get_by_text(re.compile("Покупка из цели")))
+        p.locator('select[aria-label="MCC"]').select_option("5812")
+        r.type(p.locator('input[aria-label="amount"]'), "100000")
+        r.caption("Ресторан из денег на «Машину»: пользователь хочет «Всё равно потратить»")
+        r.click(r.btn("Оплатить картой"))
+        r.click(r.btn("Всё равно потратить"))
+        pin = p.get_by_role("dialog", name="Подтвердите PIN-кодом")
+        pin.wait_for(timeout=10000)
+        r.caption("Снятие защищённых денег — только с PIN. Без него сервер отклоняет запрос (401)")
+        r.pause(2)
+        for d in "0000":
+            r.click(pin.get_by_role("button", name=d, exact=True), 0.15)
+        pin.get_by_text(re.compile("Неверный PIN")).wait_for(timeout=5000)
+        r.caption("Неверный PIN — отклонено, осталось 2 попытки (после 3 — блокировка на 60 сек)")
+        r.pause(2.5)
+        for d in "1234":
+            r.click(pin.get_by_role("button", name=d, exact=True), 0.15)
+        p.get_by_text(re.compile("Потрачено из")).wait_for(timeout=8000)
+        r.caption("PIN верный — снятие выполнено")
+        r.pause(1.8)
+        r.click(r.btn("Хорошо"))
+        r.click(p.get_by_role("button", name=re.compile("^Советы для вас")))
+        r.caption("Уведомление: «Вы подтвердили снятие… Это были не вы? Отменить» — 24 часа")
+        r.pause(3)
+        r.click(r.btn("Отменить", exact=True))
+        r.caption("Отменено: деньги вернулись в цель, бонус за дисциплину восстановлен")
+        r.pause(2.2)
+        r.expect(r.goal("Машина").get("disciplined") is True, "cancel should restore the discipline bonus")
+        r.click(r.btn("Закрыть"))
+
     def credit():
         r.click(r.tab("Главная"))
         r.click(r.btn("Кредит подобрать"))
@@ -393,7 +426,7 @@ def scenario(r: Recorder):
         r.click(r.tab("Asosiy"))
         r.caption("Interfeys o'zbek tilida — Asosiy ekran")
         r.pause(3)
-        r.caption("SmartGoal — демо завершено")
+        r.caption("Goalie — демо завершено")
         r.pause(2.5)
 
     for title, fn in [
@@ -404,6 +437,7 @@ def scenario(r: Recorder):
         ("5. Зарплата ниже обычной: пересчёт", salary),
         ("6. Перевод от близких: план не меняется", transfer),
         ("7. Guardian: кино и аптека", guardian),
+        ("7b. PIN: снятие из цели и отмена", pin_release),
         ("8. Кредитный советник", credit),
         ("9. Обязательства", obligations),
         ("10. Переключение языка", language),
@@ -477,7 +511,7 @@ def main() -> int:
         rec.issues.append("ffmpeg not available: no mp4 and no keyframes")
 
     # ---- report ----
-    lines = ["# SmartGoal — demo video report", "",
+    lines = ["# Goalie — demo video report", "",
              f"- Recorded: {time.strftime('%Y-%m-%d %H:%M')}",
              f"- Agent mode: **{mode}**",
              f"- Length: about {fmt(total)} (steps measured from page start; the video starts ~0.5 s earlier)",
@@ -491,8 +525,13 @@ def main() -> int:
     lines += ["", "## Problems found", ""]
     probs = [f"- Step failed: {s['title']} — {s['error']}" for s in rec.steps if not s["ok"]]
     probs += [f"- {x}" for x in rec.issues]
-    probs += [f"- Console error {x}" for x in rec.console_errors]
-    probs += [f"- Request {x}" for x in rec.bad_requests]
+    # the wrong-PIN attempt in step 7b is intentional: report it as expected, not as a problem
+    expected = [x for x in rec.bad_requests if "401" in x and "/auth/step-up" in x]
+    probs += [f"- Console error {x}" for x in rec.console_errors
+              if not (expected and "401" in x and "Failed to load resource" in x)]
+    probs += [f"- Request {x}" for x in rec.bad_requests if x not in expected]
+    if expected:
+        lines.append(f"- Expected (not a problem): {len(expected)} × HTTP 401 on /auth/step-up — the deliberate wrong PIN in step 7b")
     lines += probs or ["- None detected automatically (no failed steps, console errors, failed requests or horizontal overflow)."]
     lines += ["", "## Re-record", "", "Start backend and frontend first (see README), then from the project root:", "",
               "```powershell", "qa\\.venv\\Scripts\\python.exe qa\\record_demo.py", "```", "",

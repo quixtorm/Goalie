@@ -56,7 +56,7 @@ function NetworkMark() {
     <div className="relative flex items-center" style={{ width: '13cqw', height: '8cqw' }} aria-hidden>
       <span className="absolute left-0 rounded-full bg-white/80" style={{ width: '8cqw', height: '8cqw' }} />
       <span className="absolute right-0 rounded-full bg-white/45 mix-blend-screen" style={{ width: '8cqw', height: '8cqw' }} />
-      <span className="absolute inset-0 grid place-items-center font-black text-[#0b1530]/80 tracking-tighter" style={{ fontSize: '3.2cqw' }}>SG</span>
+      <span className="absolute inset-0 grid place-items-center font-black text-[#0b1530]/80 tracking-tighter" style={{ fontSize: '3.6cqw' }}>G</span>
     </div>
   )
 }
@@ -95,7 +95,7 @@ export default function BankCard({ kind = 'goal', goal, priority, main, cooling,
   const p = isMain ? PALETTES.main : (completed && !prio) ? PALETTES.done : paletteFor(prio || 3)
   const near = !isMain && !completed && progress >= 90
   const title = isMain ? t('cardMain') : (goal?.name || t('newGoal'))
-  const watermark = (isMain ? 'SMARTGOAL' : (goal?.name || '•••')).toUpperCase()
+  const watermark = (isMain ? 'GOALIE' : (goal?.name || '•••')).toUpperCase()
   const amount = isMain ? main?.balance : goal?.saved
   const parts = amountParts(amount)
 

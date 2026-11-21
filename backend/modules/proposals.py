@@ -9,7 +9,7 @@ from datetime import timedelta
 
 import calc
 from calc import CalcError
-from modules import budget, goals, guardian, obligations
+from modules import budget, goals, guardian, obligations, security
 from state import Proposal, State, new_id
 from texts import both, disp, loc, msg, render, tr
 
@@ -118,6 +118,15 @@ def agent_review(s: State) -> None:
              {"income_id": rec["id"], "transfer": rec["amount"], "goal_id": top.id, "percent": top.percent,
               "suggested": sug})
 
+    # 6. security notices: every PIN-confirmed action can be cancelled for 24 h ("Это были не вы?")
+    for e in security.active_events(s):
+        key = f"sec:{e['id']}"
+        valid.add(key)
+        _add(s, "security_notice", key, msg("sec_title"), security.notice_text(e),
+             [{"key": "undo", "label": msg("sec_cancel"),
+               "action": {"type": "undo_security", "params": {"event_id": e["id"]}}}],
+             {"event_id": e["id"], "kind": e["kind"], "amount": e["amount"]})
+
     # resolve stale agent proposals
     for p in s.proposals.values():
         if p.origin == "agent" and p.status == "pending" and p.condition_key not in valid:
@@ -160,7 +169,12 @@ def apply(s: State, proposal_id: str, option_key: str | None = None) -> dict:
         moved = obligations.topup(s, prm["obligation_id"], prm["amount"])
         result = msg("r_topup", amount_sum=moved)
     elif t == "resolve_stop":
-        result = guardian.resolve(s, prm["stop_id"], prm["option"], confirm=True)["message"]
+        if prm["option"] == "proceed":  # releases protected money: step-up checked by the endpoint
+            result = security.proceed(s, prm["stop_id"])["message"]
+        else:
+            result = guardian.resolve(s, prm["stop_id"], prm["option"], confirm=True)["message"]
+    elif t == "undo_security":
+        result = security.undo(s, prm["event_id"])["message"]
     elif t == "create_goal":
         g = goals.create(s, prm["name"], prm["amount"], prm["percent"])
         result = msg("r_goal_created", name=loc(g))
@@ -179,6 +193,16 @@ def apply(s: State, proposal_id: str, option_key: str | None = None) -> dict:
     return {"status": "confirmed", "message": render(result)}
 
 
+def needs_step_up(s: State, proposal_id: str, option_key: str | None) -> bool:
+    """True if confirming this proposal option releases protected money ("Всё равно из цели" after cooling)."""
+    p = s.proposals.get(proposal_id)
+    if not p:
+        return False
+    opt = next((o for o in p.options if o["key"] == option_key), None) if option_key else p.options[0]
+    a = (opt or {}).get("action", {})
+    return a.get("type") == "resolve_stop" and a.get("params", {}).get("option") == "proceed"
+
+
 def reject(s: State, proposal_id: str) -> dict:
     p = s.proposals.get(proposal_id)
     if not p:
@@ -188,6 +212,8 @@ def reject(s: State, proposal_id: str) -> dict:
     p.status = "rejected"
     if p.kind == "transfer_save":
         _close_offer(s, p.numbers.get("income_id"))  # rejected: never offered again, nothing moved
+    if p.kind == "security_notice":
+        security.acknowledge(s, p.numbers.get("event_id"))  # "Это был я"
     return {"status": "rejected"}
 
 

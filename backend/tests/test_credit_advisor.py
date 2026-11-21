@@ -102,15 +102,21 @@ def c():
     return client
 
 
+def pin(c):
+    return {"X-Step-Up": c.post("/auth/step-up", json={"pin": "1234"}).json()["token"]}
+
+
 def test_advise_endpoint_and_apply_requires_confirmation(c):
     r = c.post("/credits/advise", json={"amount": 15_000_000}).json()
     best = r["best"]
     before = c.get("/state").json()
-    no = c.post("/credits/apply", json={"product_id": best["product_id"], "amount": 15_000_000, "months": best["months"]})
+    body = {"product_id": best["product_id"], "amount": 15_000_000, "months": best["months"]}
+    assert c.post("/credits/apply", json={**body, "confirm": True}).status_code == 401  # no PIN
+    h = pin(c)
+    no = c.post("/credits/apply", json=body, headers=h)  # PIN ok but no explicit confirmation
     assert no.status_code == 422
     assert c.get("/state").json()["credit_applications"] == []
-    ok = c.post("/credits/apply", json={"product_id": best["product_id"], "amount": 15_000_000,
-                                        "months": best["months"], "confirm": True}).json()
+    ok = c.post("/credits/apply", json={**body, "confirm": True}, headers=h).json()
     assert ok["status"] == "demo_submitted"
     after = c.get("/state").json()
     assert len(after["credit_applications"]) == 1
@@ -118,6 +124,9 @@ def test_advise_endpoint_and_apply_requires_confirmation(c):
 
 
 def test_apply_rejects_ineligible(c):
-    r = c.post("/credits/apply", json={"product_id": "demo_auto", "amount": 15_000_000, "months": 12, "confirm": True})
+    h = pin(c)
+    r = c.post("/credits/apply", json={"product_id": "demo_auto", "amount": 15_000_000, "months": 12, "confirm": True},
+               headers=h)
     assert r.status_code == 422
-    assert c.post("/credits/apply", json={"product_id": "nope", "amount": 1, "months": 1, "confirm": True}).status_code == 404
+    assert c.post("/credits/apply", json={"product_id": "nope", "amount": 1, "months": 1, "confirm": True},
+                  headers=h).status_code == 404

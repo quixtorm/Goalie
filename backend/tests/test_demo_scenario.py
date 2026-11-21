@@ -89,6 +89,25 @@ def test_step4_pharmacy_released(c):
     assert g["saved"] == 1_038_750 and g["disciplined"] and g["rate"] == 22 and g["months_worst"] == 35
 
 
+def test_step4b_release_needs_pin_then_notice_and_cancel(c):
+    g = car(c)
+    stop = c.post("/spend", json={"source_id": g["id"], "amount": 100_000, "mcc": "5812", "merchant": "Plov Center"}).json()
+    # without the PIN: rejected
+    assert c.post(f"/spend/{stop['stop_id']}/resolve", json={"option": "proceed"}).status_code == 401
+    # wrong PIN: rejected, attempts left shown
+    bad = c.post("/auth/step-up", json={"pin": "0000"})
+    assert bad.status_code == 401 and bad.json()["attempts_left"] == 2
+    # correct PIN: accepted
+    tok = c.post("/auth/step-up", json={"pin": "1234"}).json()["token"]
+    ok = c.post(f"/spend/{stop['stop_id']}/resolve", json={"option": "proceed"}, headers={"X-Step-Up": tok})
+    assert ok.status_code == 200 and car(c)["saved"] == g["saved"] - 100_000
+    n = [p for p in c.get("/agent/inbox").json() if p["kind"] == "security_notice" and p["status"] == "pending"]
+    assert len(n) == 1 and "Это были не вы?" in n[0]["text"]
+    # "Отменить" within 24 h: money and discipline bonus restored, later steps unchanged
+    c.post(f"/agent/proposals/{n[0]['id']}/confirm")
+    assert car(c)["saved"] == g["saved"] and car(c)["disciplined"] is True
+
+
 def test_step5_credit(c):
     r = c.post("/agent/chat", json={"message": "Хочу телефон в кредит за 20 млн на 12 месяцев под 28%"}).json()
     d = r["data"]

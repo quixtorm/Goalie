@@ -10,7 +10,7 @@ import { ConfirmSheet, Icon, Money, Row, SalaryOnlyNote, Sheet } from '../compon
 // Card detail screen, structured like a real bank card screen:
 // tinted header with the card, three round actions, then list rows that open sheets.
 export default function GoalDetail({ id }) {
-  const { state, t, lang, go, notify, refresh, openAgent } = useApp()
+  const { state, t, lang, go, notify, refresh, openAgent, withStepUp } = useApp()
   const g = state.goals.find((x) => x.id === id)
   const [modal, setModal] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -27,7 +27,7 @@ export default function GoalDetail({ id }) {
 
   async function run(fn, msg) {
     setBusy(true)
-    try { await fn(); notify({ text: msg }); setModal(null); refresh() } catch (e) { notify({ text: e.message, error: true }) } finally { setBusy(false) }
+    try { await fn(); notify({ text: msg }); setModal(null); refresh() } catch (e) { if (!e.cancelled) notify({ text: e.message, error: true }) } finally { setBusy(false) }
   }
 
   const actions = [
@@ -125,10 +125,10 @@ export default function GoalDetail({ id }) {
 
       <ConfirmSheet open={modal === 'use'} onClose={() => setModal(null)} busy={busy} tone="success"
         title={t('useTitle')} text={t('useText', uzs(g.saved), uzs(g.accrued_bonus))}
-        confirmLabel={t('useOk')} onConfirm={() => run(() => api.useGoal(g.id), t('done'))} />
+        confirmLabel={t('useOk')} onConfirm={() => run(() => withStepUp((tok) => api.useGoal(g.id, tok)), t('done'))} />
       <ConfirmSheet open={modal === 'close'} onClose={() => setModal(null)} busy={busy}
         title={t('closeTitle')} text={t('closeText', uzs(g.saved), uzs(g.accrued_bonus))}
-        confirmLabel={t('closeOk')} onConfirm={() => run(() => api.closeGoal(g.id), t('closingNote'))} />
+        confirmLabel={t('closeOk')} onConfirm={() => run(() => withStepUp((tok) => api.closeGoal(g.id, tok)), t('closingNote'))} />
     </div>
   )
 }

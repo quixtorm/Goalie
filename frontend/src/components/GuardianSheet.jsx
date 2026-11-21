@@ -6,7 +6,7 @@ import { ConfirmSheet, Icon, Money, Sheet } from './ui'
 
 // Anti-Impulse Guardian: opens automatically on every spend attempt from a goal or reserve.
 export default function GuardianSheet({ result, onClose }) {
-  const { t, lang, notify, refresh } = useApp()
+  const { t, lang, notify, refresh, withStepUp } = useApp()
   const [busy, setBusy] = useState(false)
   const [final, setFinal] = useState(null)
   const [sure, setSure] = useState(false)
@@ -16,11 +16,14 @@ export default function GuardianSheet({ result, onClose }) {
   async function choose(option, confirm = false) {
     setBusy(true)
     try {
-      const res = await api.resolve(r.stop_id, option, confirm)
+      // "proceed anyway" releases protected money -> PIN; the other options don't
+      const res = option === 'proceed'
+        ? await withStepUp((tok) => api.resolve(r.stop_id, option, confirm, tok))
+        : await api.resolve(r.stop_id, option, confirm)
       setFinal(res.message)
       refresh()
     } catch (e) {
-      notify({ text: e.message, error: true })
+      if (!e.cancelled) notify({ text: e.message, error: true })
     } finally {
       setBusy(false)
       setSure(false)

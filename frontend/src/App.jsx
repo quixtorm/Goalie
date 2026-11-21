@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api, setApiLang } from './api'
 import { AppCtx } from './ctx'
 import { makeT } from './i18n'
 import AgentSheet from './components/AgentSheet'
 import GuardianSheet from './components/GuardianSheet'
 import Header from './components/Header'
+import StepUpSheet from './components/StepUpSheet'
 import TabBar from './components/TabBar'
 import { ErrorBox, Skeleton, Toast } from './components/ui'
 import CardGallery from './pages/CardGallery'
@@ -32,6 +33,10 @@ export default function App() {
     return l
   })
   const [hidden, setHidden] = useState(false)
+  // step-up PIN: token kept in memory only (never storage), reused until it expires (5 min, server-side)
+  const stepUpToken = useRef(null)
+  const [pinReq, setPinReq] = useState(null)
+  const askPin = useCallback(() => new Promise((resolve, reject) => setPinReq({ resolve, reject })), [])
 
   const refresh = useCallback(() => {
     api.state().then((s) => { setState(s); setError(null) }).catch((e) => setError(e.message))
@@ -46,7 +51,23 @@ export default function App() {
     notify: (x) => setToast(x),
     openAgent: (opts = {}) => setAgentReq({ focus: 'chat', ...opts, nonce: Date.now() }),
     openGuardian: (r) => setGuardian(r),
-  }), [state, lang, hidden, refresh])
+    // Runs a protected action: fn(token). Asks for the PIN only if there is no valid token; if the server
+    // says the token is no longer valid (401 step_up), asks once more. Cancelling the PIN rejects with .cancelled.
+    withStepUp: async (fn) => {
+      const cur = stepUpToken.current
+      let tok = cur && cur.exp > Date.now() + 5000 ? cur.token : await askPin()
+      try {
+        return await fn(tok)
+      } catch (e) {
+        if (e.status === 401 && e.data?.step_up) {
+          stepUpToken.current = null
+          tok = await askPin()
+          return fn(tok)
+        }
+        throw e
+      }
+    },
+  }), [state, lang, hidden, refresh, askPin])
 
   const tab = { goal: 'goals', create: 'goals', cards: 'more' }[route.name] || route.name
 
@@ -70,6 +91,9 @@ export default function App() {
         <AgentSheet req={agentReq} onClose={() => setAgentReq(null)} chat={chat} setChat={setChat} />
         <GuardianSheet key={guardian ? guardian.stop_id || guardian.merchant + guardian.amount : 'none'} result={guardian}
           onClose={() => setGuardian(null)} />
+        <StepUpSheet req={pinReq}
+          onDone={(r) => { stepUpToken.current = { token: r.token, exp: Date.now() + r.expires_in * 1000 }; pinReq?.resolve(r.token); setPinReq(null) }}
+          onCancel={() => { const e = new Error('cancelled'); e.cancelled = true; pinReq?.reject(e); setPinReq(null) }} />
         <Toast toast={toast} onClose={() => setToast(null)} />
       </div>
     </AppCtx.Provider>
