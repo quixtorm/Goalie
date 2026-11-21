@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../api'
 import { useApp } from '../ctx'
-import { date, digitsOnly, groupDigits, uzs } from '../format'
+import { date, digitsOnly, groupDigits } from '../format'
 import BankCard from '../components/BankCard'
 import { BackButton, ConfirmSheet, Icon, Money, SalaryOnlyNote } from '../components/ui'
 
@@ -10,7 +10,7 @@ import { BackButton, ConfirmSheet, Icon, Money, SalaryOnlyNote } from '../compon
 const TERMS = [null, 12, 24, 36, 60]
 
 export default function CreateGoal() {
-  const { state, t, lang, go, notify, refresh, openAgent } = useApp()
+  const { state, t, lang, go, notify, refresh } = useApp()
   const [name, setName] = useState('')
   const [amount, setAmount] = useState(0)
   const [term, setTerm] = useState(null) // null = "Агент подберёт"
@@ -145,9 +145,6 @@ export default function CreateGoal() {
             ))}
           </div>
         </div>
-        <button className="btn-link !px-0" onClick={() => openAgent({ send: ready ? t('askAgentGoal', uzs(amount), name.trim()) : t('askAgentEmpty') })}>
-          <Icon name="sparkle" size={16} fill strokeWidth={0} /> {t('askAgent')}
-        </button>
       </section>
 
       {/* sticky create button (the tab bar is hidden on this screen) */}

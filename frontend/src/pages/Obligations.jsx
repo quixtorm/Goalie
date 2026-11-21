@@ -3,7 +3,7 @@ import { api } from '../api'
 import { useApp } from '../ctx'
 import { date, digitsOnly, dueText, groupDigits, uzs } from '../format'
 import { StatusChip } from './Home'
-import { ConfirmSheet, Icon, Money, Progress, Sheet } from '../components/ui'
+import { ConfirmSheet, DateField, Icon, Money, Progress, Sheet } from '../components/ui'
 
 export default function Obligations() {
   const { state, t, lang, notify, refresh } = useApp()
@@ -78,8 +78,8 @@ export default function Obligations() {
           </div>
           <div>
             <label className="label" htmlFor="odate">{t('oblDate')}</label>
-            <input id="odate" type="date" className="input [color-scheme:dark]" min={state.today} value={form.due_date}
-              onChange={(e) => setForm({ ...form, due_date: e.target.value })} />
+            <DateField id="odate" min={state.today} value={form.due_date}
+              onChange={(v) => setForm((f) => ({ ...f, due_date: v }))} />
           </div>
           <button className="btn-primary w-full" disabled={busy || !form.name.trim() || !form.amount || !form.due_date}
             onClick={() => run(() => api.createObligation({ ...form, name: form.name.trim() }), t('added'), () => {

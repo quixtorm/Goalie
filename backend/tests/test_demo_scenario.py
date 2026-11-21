@@ -68,7 +68,7 @@ def test_step3_cinema_stopped_cooling_then_decline(c):
     r = c.post("/spend", json={"source_id": g["id"], "amount": 150_000, "mcc": "7832",
                                "merchant": "Magic Cinema"}).json()
     assert r["outcome"] == "stopped"
-    assert r["delay_days"] == 3 and r["bonus_lost"] == 7_750_042
+    assert r["delay_days"] == 3 and r["bonus_lost"] == 1_045_500  # next 12 months only
     assert r["can_cover_from_main"] is True
     assert car(c)["saved"] == 1_338_750
     c.post(f"/spend/{r['stop_id']}/resolve", json={"option": "cooling"})

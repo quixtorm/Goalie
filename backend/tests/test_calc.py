@@ -119,7 +119,23 @@ def test_breach_cost_cinema():
     b = IncomeBasis(6_375_000, Fraction(7_362_500))
     c = calc.breach_cost(50_000_000, 1_338_750, 22, 150_000, b, date(2026, 12, 1))
     assert c.delay_days == 3
-    assert c.bonus_lost == 7_750_042
+    # next 12 months only: sum(1 338 750 + m * 1 402 500, m=1..12) * (22-12)/1200 = 125 460 000 / 120
+    assert c.bonus_lost == 1_045_500
+
+
+def test_breach_bonus_is_next_12_months_only():
+    b = IncomeBasis(6_375_000, Fraction(7_362_500))
+    contrib = calc.monthly_contribution(22, b.worst)
+    expected = calc.round_money(calc.projected_bonus(1_338_750, contrib, 50_000_000, 12, 22)
+                                - calc.projected_bonus(1_338_750, contrib, 50_000_000, 12, 12))
+    # the same 150 000 purchase on a goal with a much longer horizon still loses only one year of bonus
+    long_goal = calc.breach_cost(500_000_000, 1_338_750, 22, 150_000, b, date(2026, 12, 1))
+    assert long_goal.bonus_lost == expected
+    # a goal that finishes in < 12 months counts only its remaining months (balance capped at the goal)
+    short = calc.breach_cost(3_000_000, 1_338_750, 22, 150_000, b, date(2026, 12, 1))
+    assert 0 < short.bonus_lost < expected
+    # delay logic unchanged
+    assert long_goal.delay_days == 3
 
 
 def test_breach_tiny_amount_min_one_day(basis):

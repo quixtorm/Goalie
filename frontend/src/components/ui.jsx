@@ -30,6 +30,7 @@ const P = {
   snow: 'M12 2v20M3.3 7l17.4 10M3.3 17 20.7 7M9 3.5l3 2 3-2M9 20.5l3-2 3 2M3.6 10.5l3.2-1.4-.4-3.5M20.4 13.5l-3.2 1.4.4 3.5M3.6 13.5l3.2 1.4-.4 3.5M20.4 10.5l-3.2-1.4.4-3.5',
   waves: 'M8.5 8.5a5 5 0 0 1 0 7M12 6a8.5 8.5 0 0 1 0 12M15.5 3.5a12 12 0 0 1 0 17',
   info: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 8v5m0-8h.01',
+  calendar: 'M4 6h16v14H4V6Zm0 4h16M8 3v4M16 3v4',
   star: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9L12 3Z',
   chart: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
   sort: 'M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4',
@@ -166,17 +167,21 @@ export function ConfirmSheet({ open, title, text, confirmLabel, onConfirm, onClo
 export function Toast({ toast, onClose }) {
   useEffect(() => {
     if (!toast) return
-    const t = setTimeout(onClose, toast.long ? 6000 : 3500)
+    const t = setTimeout(onClose, 3000)
     return () => clearTimeout(t)
   }, [toast, onClose])
   if (!toast) return null
-  return (
-    <div className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[80] w-[calc(100%-32px)] max-w-[388px] animate-rise" role="status">
-      <div className={`${toast.error ? 'bg-rose-600' : 'bg-card2 border border-line'} text-ink rounded-btn px-4 py-3 shadow-soft flex gap-3 items-start`}>
+  // Top of the screen, under the header: bottom sheets and the tab bar live at the bottom, so a toast here never
+  // covers their buttons. pointer-events-none: it can never block a tap. Positioning (outer) and the slide-in
+  // animation (inner) are on separate elements so the animation can't undo the centering transform.
+  return createPortal(
+    <div className="fixed top-[72px] inset-x-0 z-[80] flex justify-center px-4 pointer-events-none" role="status" aria-live="polite">
+      <div className={`w-full max-w-[388px] animate-rise ${toast.error ? 'bg-rose-600' : 'bg-card2 border border-line'} text-ink rounded-btn px-4 py-3 shadow-soft flex gap-3 items-start`}>
         <span aria-hidden>{toast.error ? '⚠' : '✓'}</span>
         <span className="flex-1 whitespace-pre-line">{toast.text}</span>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
@@ -199,6 +204,51 @@ export function ErrorBox({ text, onRetry }) {
     <div className="card text-center mt-6">
       <p className="text-rose-300 font-medium">⚠ {text}</p>
       {onRetry && <button className="btn-ghost mt-4" onClick={onRetry}>{t('retry')}</button>}
+    </div>
+  )
+}
+
+// Localized date input: always shows dd.mm.yyyy (both languages), emits an ISO date (yyyy-mm-dd) or ''.
+// The browser's <input type=date> follows the OS locale (mm/dd/yyyy on many PCs), so it is only used as an
+// optional calendar popup behind the button.
+const isoToDmy = (iso) => (iso ? `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}` : '')
+function dmyToIso(text) {
+  const m = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(text)
+  if (!m) return null
+  const [, d, mo, y] = m
+  const dt = new Date(Date.UTC(+y, +mo - 1, +d))
+  if (dt.getUTCFullYear() !== +y || dt.getUTCMonth() !== +mo - 1 || dt.getUTCDate() !== +d) return null
+  return `${y}-${mo}-${d}`
+}
+
+export function DateField({ id, value, onChange, min }) {
+  const { t } = useApp()
+  const [text, setText] = useState(isoToDmy(value))
+  const picker = useRef(null)
+  const iso = dmyToIso(text)
+  const error = text.length === 10 && (!iso ? t('dateInvalid') : min && iso < min ? t('datePast') : null)
+
+  function setFromText(raw) {
+    const digits = raw.replace(/\D/g, '').slice(0, 8)
+    const masked = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 8)].filter(Boolean).join('.')
+    setText(masked)
+    const v = dmyToIso(masked)
+    onChange(v && (!min || v >= min) ? v : '')
+  }
+
+  return (
+    <div>
+      <div className="relative">
+        <input id={id} className={`input num pr-14 ${error ? '!border-rose-400' : ''}`} inputMode="numeric" autoComplete="off"
+          placeholder={t('datePh')} value={text} onChange={(e) => setFromText(e.target.value)} aria-invalid={!!error} />
+        <button type="button" className="press absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 grid place-items-center rounded-full hover:bg-white/10 text-muted"
+          aria-label={t('pickDate')} onClick={() => { try { picker.current?.showPicker() } catch { picker.current?.focus() } }}>
+          <Icon name="calendar" size={20} />
+        </button>
+        <input ref={picker} type="date" tabIndex={-1} aria-hidden="true" min={min} className="absolute right-2 bottom-0 w-0 h-0 opacity-0 pointer-events-none [color-scheme:dark]"
+          onChange={(e) => { if (e.target.value) { setText(isoToDmy(e.target.value)); onChange(e.target.value >= (min || '') ? e.target.value : '') } }} />
+      </div>
+      {error && <p className="mt-1 text-sm text-rose-300">⚠ {error}</p>}
     </div>
   )
 }

@@ -21,6 +21,7 @@ export function coolingFor(state, goalId) {
 export default function WalletStack() {
   const { state, t, go, notify, refresh } = useApp()
   const wrap = useRef(null)
+  const root = useRef(null) // bar + stack: taps here are "inside" (the bar toggles itself)
   const [w, setW] = useState(343)
   const [open, setOpen] = useState(false)
   const [sel, setSel] = useState(null)
@@ -54,7 +55,9 @@ export default function WalletStack() {
   }
   const byId = Object.fromEntries(state.goals.map((g) => [g.id, g]))
   const cards = [...liveIds.map((id) => byId[id]).filter(Boolean), ...others]
-  const ghost = active.length < max
+  // "+" slot: with no subcards it sits behind the main card; once a subcard exists it appears ONLY at the end of
+  // the expanded list (never in the collapsed stack, so it can't cover the peeking strips).
+  const ghost = cards.length === 0 || (open && active.length < max)
   const items = [...cards.map((g) => ({ type: 'goal', g })), ...(ghost ? [{ type: 'ghost' }] : [])]
   const N = items.length
 
@@ -63,7 +66,8 @@ export default function WalletStack() {
     if (!open) return
     const onDown = (e) => {
       if (document.querySelector('[role="dialog"]')) return
-      if (wrap.current && !wrap.current.contains(e.target)) { setOpen(false); setSel(null) }
+      // the toggle bar counts as inside: otherwise pressing it would collapse here and its click re-open the stack
+      if (root.current && !root.current.contains(e.target)) { setOpen(false); setSel(null) }
     }
     document.addEventListener('pointerdown', onDown)
     return () => document.removeEventListener('pointerdown', onDown)
@@ -137,7 +141,7 @@ export default function WalletStack() {
   }
 
   return (
-    <div className="mb-2">
+    <div className="mb-2" ref={root}>
       {cards.length > 0 && (
         <button onClick={() => { setOpen(!open); setSel(null) }} aria-expanded={open}
           className="press w-full flex items-center justify-between rounded-btn bg-white/10 hover:bg-white/15 px-4 min-h-[46px] font-semibold text-white mb-3">
@@ -162,7 +166,8 @@ export default function WalletStack() {
               }}
               onPointerDown={(e) => it.g && onDown(e, it.g, j)}>
               {it.type === 'ghost'
-                ? <BankCard kind="ghost" label={N === 1 ? t('addSubcard') : t('addSlot')} onClick={() => tapItem(it, j)} />
+                ? <BankCard kind="ghost" className="animate-fade-in" label={N === 1 ? t('addSubcard') : t('addSlot')}
+                    onClick={() => tapItem(it, j)} />
                 : <BankCard goal={it.g} priority={it.g.status === 'active' ? liveIds.indexOf(it.g.id) + 1 : 0}
                     cooling={coolingFor(state, it.g.id)} tilt={open}
                     onUse={() => go('goal', { id: it.g.id })} onClick={() => tapItem(it, j)} />}

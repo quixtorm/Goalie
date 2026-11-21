@@ -27,9 +27,10 @@ FAIL_DIR = OUT / "failures"
 APP = "http://127.0.0.1:5173"
 API = "http://127.0.0.1:8000"
 VIEW = {"width": 390, "height": 844}
-TYPE_DELAY = 60          # ms per character
-SLOW_MO = 250            # ms pause per visible user action (click). Applied in Recorder.click instead of
+TYPE_DELAY = 40          # ms per character
+SLOW_MO = 150            # ms pause per visible user action (click). Applied in Recorder.click instead of
                          # Playwright's slow_mo, which would add it to every internal call (~10 per click).
+PAUSE_SCALE = 0.75       # all reading pauses x0.75 -> full scenario under 3 minutes
 sys.stdout.reconfigure(encoding="utf-8")
 
 # ---------- overlay: fake cursor + caption bar (injected into every page) ----------
@@ -95,7 +96,7 @@ class Recorder:
                            [self.cur["title"] if self.cur else "", text])
 
     def pause(self, sec: float = 2.0):
-        self.page.wait_for_timeout(int(sec * 1000))
+        self.page.wait_for_timeout(int(sec * PAUSE_SCALE * 1000))
 
     def show(self, loc):
         loc.first.evaluate("e => e.scrollIntoView({block: 'center', behavior: 'smooth'})")
@@ -212,11 +213,14 @@ def scenario(r: Recorder):
     def home():
         r.caption("Главный экран: основная карта, общий баланс и стопка подкарт-целей")
         r.pause(2.5)
+        r.expect(p.get_by_text(re.compile("^Подкарта$")).count() == 0, "no '+' ghost card in the collapsed stack")
         r.click(p.get_by_text(re.compile("Показать подкарты")))
-        r.caption("Подкарты выезжают из-под основной карты, как в кошельке")
+        r.caption("Подкарты выезжают из-под основной карты, как в кошельке; «+» — в конце списка")
         r.pause(2.5)
+        r.expect(p.get_by_text(re.compile("Скрыть подкарты")).count() == 1, "bar should say 'Скрыть' when expanded")
         r.click(p.get_by_text(re.compile("Скрыть подкарты")))
         r.pause(1.2)
+        r.expect(p.get_by_text(re.compile("Показать подкарты")).count() == 1, "bar should say 'Показать' when collapsed")
 
     def create():
         r.click(r.btn("Новая цель").first)
@@ -224,6 +228,7 @@ def scenario(r: Recorder):
         r.pause(1.5)
         r.type(p.locator("#gname"), "Машина")
         r.type(p.locator("#gamount"), "50000000")
+        r.expect(p.get_by_text("Спросить агента").count() == 0, "no 'Спросить агента' link on Create Goal")
         r.caption("Агент считает процент по худшему месяцу зарплаты (переводы не учитываются)…")
         p.get_by_text("Подобрано агентом").wait_for(timeout=15000)
         r.pause(1.5)
@@ -304,7 +309,7 @@ def scenario(r: Recorder):
         r.pause(1.5)
         r.click(r.btn("Оплатить картой"))
         p.get_by_text(re.compile("Подождите")).wait_for(timeout=10000)
-        r.caption("Стоп: цель отложится на 3 дня, бонус уменьшится на 7 750 042 so'm")
+        r.caption("Стоп: цель отложится на 3 дня, потеря бонуса за ближайший год — 1 045 500 so'm")
         r.pause(3.5)
         r.click(r.btn(re.compile("Подождать до завтра")))
         r.caption("Пауза 24 часа: если желание останется — решим завтра")
@@ -360,7 +365,8 @@ def scenario(r: Recorder):
         r.click(r.btn(re.compile("Добавить платёж")))
         r.type(p.locator("#oname"), "Долг брату")
         r.type(p.locator("#oamount"), "1500000")
-        p.locator("#odate").fill("2026-12-05")
+        r.type(p.locator("#odate"), "05122026")  # localized field: shows 05.12.2026
+        r.expect(p.locator("#odate").input_value() == "05.12.2026", "date field should show dd.mm.yyyy")
         r.click(r.btn("Добавить", exact=True))
         r.caption("Новый долг через 3 дня — резерва не хватает 1 500 000")
         r.pause(2.5)
@@ -476,7 +482,7 @@ def main() -> int:
              f"- Agent mode: **{mode}**",
              f"- Length: about {fmt(total)} (steps measured from page start; the video starts ~0.5 s earlier)",
              f"- Viewport 390×844 @2x (mp4 upscaled to 780×1688), {SLOW_MO} ms pause per click, "
-             f"typing {TYPE_DELAY} ms/char, 1.5–3.5 s reading pauses",
+             f"typing {TYPE_DELAY} ms/char, reading pauses ×{PAUSE_SCALE} (≈1.1–2.6 s)",
              f"- Files: `demo.webm`" + (", `demo.mp4` (H.264, yuv420p)" if mp4_ok else "") + ", `frames/stepNN.png`", "",
              "## Steps", "", "| # | Step | Start | End | Result |", "|---|---|---|---|---|"]
     for i, s in enumerate(rec.steps, 1):

@@ -23,6 +23,7 @@ BASE_RATE = 12          # annual %
 DISCIPLINE_RATE = 22    # annual %
 DTI_THRESHOLD = Fraction(40, 100)
 DEADLINE_REMINDER_DAYS = 5
+BREACH_BONUS_MONTHS = 12  # guardian shows the bonus lost over the next year, not the whole goal horizon
 INCOME_HISTORY_MONTHS = 6
 DAILY_SPEND_BASELINE = 120_000
 PAYDAY_INTERVAL_DAYS = 30
@@ -369,8 +370,11 @@ def breach_cost(goal_amount: int, saved: int, percent: int, amount: int, basis: 
         delay = max(1, delay)
     remaining = max(0, goal_amount - saved)
     mw = months_needed(remaining, percent, basis.worst)
-    lost = projected_bonus(saved, contrib, goal_amount, mw, DISCIPLINE_RATE) - projected_bonus(
-        saved, contrib, goal_amount, mw, BASE_RATE
+    # bonus lost over the NEXT 12 MONTHS only (or fewer if the goal finishes sooner): current balance plus the
+    # scheduled contributions of those months, at DISCIPLINE_RATE minus BASE_RATE. Keeps the number proportionate.
+    horizon = min(BREACH_BONUS_MONTHS, mw)
+    lost = projected_bonus(saved, contrib, goal_amount, horizon, DISCIPLINE_RATE) - projected_bonus(
+        saved, contrib, goal_amount, horizon, BASE_RATE
     )
     new_mw = months_needed(remaining + amount, percent, basis.worst)
     return BreachCost(delay, round_money(lost), new_mw, add_months(today, new_mw))
