@@ -64,6 +64,11 @@ def test_full_demo_in_uzbek_has_no_russian(c):
     top = next(p for p in no_cyrillic(c.get("/agent/inbox", headers=UZ)) if p["kind"] == "obligation_topup")
     assert "3 kundan keyin" in top["text"]
     no_cyrillic(c.post(f"/agent/proposals/{top['id']}/confirm", headers=UZ))
+    no_cyrillic(c.post("/demo/transfer-in", json={"amount": 2_000_000, "source": "Oila"}, headers=UZ))
+    tr = next(p for p in no_cyrillic(c.get("/agent/inbox", headers=UZ)) if p["kind"] == "transfer_save")
+    assert "Oila" in tr["title"]
+    no_cyrillic(c.post(f"/agent/proposals/{tr['id']}/confirm", headers=UZ))
+    no_cyrillic(c.post("/agent/chat", json={"message": "Nega oila o'tkazmalari rejaga kirmaydi?", "lang": "uz"}))
     no_cyrillic(c.get("/state", headers=UZ))
 
 

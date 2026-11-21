@@ -64,6 +64,17 @@ def test_tool_loop_creates_proposal_only(s, monkeypatch):
     assert r2["source"] == "code" and len(s.goals) == 2
 
 
+def test_income_by_type_tool_formats_money_and_keeps_counts(s, monkeypatch):
+    fake = FakeClient([
+        NS(stop_reason="tool_use", content=[tool("t1", "list_income_by_type", {})]),
+        NS(stop_reason="end_turn", content=[text("Только зарплата.")]),
+    ])
+    use(monkeypatch, fake)
+    agent.chat(s, "Почему переводы не учитываются?", [])
+    tr = fake.calls[1]["messages"][-1]["content"][0]["content"]
+    assert '"count": 2' in tr and "3 500 000 so'm" in tr and "81 600 000 so'm" in tr and '"planning_basis": "SALARY"' in tr
+
+
 def test_bad_tool_input_returns_error_not_crash(s, monkeypatch):
     fake = FakeClient([
         NS(stop_reason="tool_use", content=[tool("t1", "calc_credit", {"amount": -5, "annual_rate": 28, "months": 12})]),

@@ -78,6 +78,12 @@ const ru = {
   contribution: 'Пополнение с зарплаты', gallery: 'Галерея карт', galleryHint: 'Все состояния карты для проверки дизайна',
   issued: 'Карта выпущена!', yourCard: 'Ваша карта', rate: 'Ставка', bonusNow: 'Начислено',
   stNear: 'Почти у цели', stLocked: 'Защищена', stCompleted: 'Собрано', stCooling: 'Пауза 24 часа', stGhost: 'Пустой слот',
+  type_SALARY: 'Зарплата', type_TRANSFER: 'Перевод', type_OTHER: 'Другое',
+  salaryOnly: 'Расчёт идёт только по зарплате. Переводы от близких не учитываются.',
+  worstAnnual: 'Минимальная зарплата за год', worstMonthly: 'Самый низкий месяц зарплаты',
+  transferDemo: 'Симулировать перевод от близких', transferFrom: 'От кого', transferDefault: 'Семья', transferBtn: 'Зачислить перевод',
+  transferDone: (a) => `Перевод ${a} зачислен на основную карту. План и сроки не изменились.`,
+  salaryDemo: 'Симулировать зарплату',
 }
 
 const uz = {
@@ -159,6 +165,12 @@ const uz = {
   contribution: "Maoshdan to'ldirish", gallery: "Kartalar ko'rinishi", galleryHint: 'Dizaynni tekshirish uchun kartaning barcha holatlari',
   issued: 'Karta chiqarildi!', yourCard: 'Sizning kartangiz', rate: 'Stavka', bonusNow: 'Hisoblangan',
   stNear: 'Maqsadga oz qoldi', stLocked: 'Himoyalangan', stCompleted: "Yig'ildi", stCooling: 'Pauza 24 soat', stGhost: "Bo'sh joy",
+  type_SALARY: 'Maosh', type_TRANSFER: "O'tkazma", type_OTHER: 'Boshqa',
+  salaryOnly: "Hisob faqat maosh bo'yicha. Yaqinlardan o'tkazmalar hisobga olinmaydi.",
+  worstAnnual: 'Yillik eng past maosh', worstMonthly: 'Eng past maosh oyi',
+  transferDemo: "Yaqinlardan o'tkazmani simulyatsiya qilish", transferFrom: 'Kimdan', transferDefault: 'Oila', transferBtn: "O'tkazmani qabul qilish",
+  transferDone: (a) => `${a} o'tkazma asosiy kartaga tushdi. Reja va muddatlar o'zgarmadi.`,
+  salaryDemo: 'Maoshni simulyatsiya qilish',
 }
 
 export const DICT = { ru, uz }

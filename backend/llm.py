@@ -48,6 +48,11 @@ HARD RULES
    results. Never mention, compare with or "correct" your earlier messages.
 7. Answer only what was asked. Do not mention obligations unless the user asked about them, or an obligation in
    <state> has due_in_days <= 5 AND shortfall > 0.
+8. Income for planning means SALARY ONLY. Transfers from family/friends and other inflows are irregular, so they
+   never change percents, deadlines or credit checks. They are optional extra savings opportunities: the app may
+   offer to put part of a transfer into a goal, and that happens only after the user confirms.
+   If the user asks why transfers are not counted, call list_income_by_type and explain in simple words
+   with its numbers (worst salary month, worst annual salary, salary vs transfer totals and counts).
 
 HOW TO ANSWER
 - Short: first the main takeaway (1-2 sentences), then key numbers as 2-4 bullet lines, then 2-3 options,
@@ -84,6 +89,8 @@ TOOLS = [
           "every goal.", {"amount": INT, "annual_rate": {"type": "number"}, "months": INT},
           ["amount", "annual_rate", "months"]),
     _tool("cashflow_check", "Money free to spend until the next salary and whether there is a cash gap.", {}, []),
+    _tool("list_income_by_type", "Income totals and counts by type (SALARY, TRANSFER, OTHER) for the last 12 months, "
+          "plus the salary-only planning numbers: worst monthly, average monthly and worst annual salary.", {}, []),
     _tool("propose_goal", "Create a goal PROPOSAL card. The user must confirm it; nothing is created yet.",
           {"name": {"type": "string"}, "amount": INT, "percent": INT}, ["name", "amount", "percent"]),
     _tool("propose_obligation", "Create a mandatory-payment PROPOSAL card (rent, loan, debt). User must confirm.",
@@ -128,7 +135,10 @@ def compact_state(s: State) -> dict:
     return {
         "today": s.today.isoformat(),
         "main_card": budget.cashflow_view(s),
-        "income": {"worst": b.worst, "avg": calc.round_money(b.avg), "next_salary": s.next_income_date.isoformat()},
+        "income": {"planning_basis": "SALARY only", "worst_monthly_salary": b.worst,
+                   "avg_monthly_salary": calc.round_money(b.avg),
+                   "worst_annual_salary": calc.worst_annual_income(s.incomes),
+                   "next_salary": s.next_income_date.isoformat()},
         "goals": [{k: v for k, v in goals.view(s, g).items()
                    if k in ("name", "priority", "amount", "saved", "percent", "months_best", "months_worst",
                             "expiry", "rate", "status")} for g in budget.active_goals(s)],
@@ -141,7 +151,7 @@ def compact_state(s: State) -> dict:
     }
 
 
-PLAIN_INT_KEYS = {"priority", "percent", "raw_percent", "cap_percent", "used_percent", "months", "target_months",
+PLAIN_INT_KEYS = {"count", "priority", "percent", "raw_percent", "cap_percent", "used_percent", "months", "target_months",
                   "months_worst", "months_best", "months_before", "months_after", "delay_months", "dti_percent",
                   "days_until_next_income", "due_in_days", "max_goals", "max_total_percent", "rate", "new_percent",
                   "old_percent", "progress", "planned_months_left"}
@@ -178,6 +188,9 @@ def _run_tool(s: State, name: str, args: dict, created: list) -> dict:
         return {**r.__dict__, "impact_on_goals": goals.credit_impact(s, r.payment)}
     if name == "cashflow_check":
         return budget.cashflow_view(s)
+    if name == "list_income_by_type":
+        import fallback
+        return fallback.income_view(s)
     if name == "propose_goal":
         a = GoalP(**args)
         p = proposals.propose_goal(s, a.name, a.amount, a.percent)

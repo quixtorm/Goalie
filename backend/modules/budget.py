@@ -6,7 +6,7 @@ from state import State
 
 
 def basis(s: State) -> calc.IncomeBasis:
-    return calc.income_basis(s.income_history)
+    return calc.basis_from_records(s.incomes)  # salary only
 
 
 def active_goals(s: State):

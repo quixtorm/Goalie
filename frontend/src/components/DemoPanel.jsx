@@ -13,6 +13,7 @@ export default function DemoPanel() {
   const [mccs, setMccs] = useState([])
   const [buy, setBuy] = useState({ source_id: '', mcc: '7832', amount: 150000, merchant: 'Magic Cinema' })
   const [busy, setBusy] = useState(false)
+  const [transfer, setTransfer] = useState({ amount: 2000000, source: null }) // null -> default name in UI language
 
   useEffect(() => { api.mcc().then(setMccs).catch(() => {}) }, [lang])
 
@@ -52,7 +53,7 @@ export default function DemoPanel() {
       <p className="text-sm text-muted">{t('demoDate')}: {date(state.today, lang)}</p>
 
       <div>
-        <label className="label" htmlFor="salary">💰 {t('salary')}</label>
+        <label className="label" htmlFor="salary">💰 {t('salaryDemo')}</label>
         <div className="flex gap-2 mb-2">
           {[{ l: t('normal'), v: state.income.avg }, { l: '−15%', v: 6375000 }].map((p) => (
             <button key={p.l} className="btn-ghost !min-h-[38px] !px-3 text-sm" onClick={() => setSalary(p.v)}>{p.l}: {groupDigits(p.v)}</button>
@@ -65,6 +66,22 @@ export default function DemoPanel() {
             {t('credit')}
           </button>
         </div>
+      </div>
+
+      <div>
+        <label className="label" htmlFor="tr-amount">👪 {t('transferDemo')}</label>
+        <div className="grid grid-cols-[1fr_auto] gap-2">
+          <input id="tr-amount" className="input num" inputMode="numeric" value={groupDigits(transfer.amount)}
+            onChange={(e) => setTransfer({ ...transfer, amount: digitsOnly(e.target.value) })} />
+          <input className="input w-[120px]" maxLength={60} aria-label={t('transferFrom')} placeholder={t('transferFrom')}
+            value={transfer.source ?? t('transferDefault')} onChange={(e) => setTransfer({ ...transfer, source: e.target.value })} />
+        </div>
+        <button className="btn-ghost w-full mt-2" disabled={busy || !transfer.amount || !(transfer.source ?? t('transferDefault')).trim()}
+          onClick={() => run(() => api.transferIn(transfer.amount, (transfer.source ?? t('transferDefault')).trim()),
+            (r) => ({ text: t('transferDone', uzs(r.amount)), long: true }))}>
+          {t('transferBtn')}
+        </button>
+        <p className="mt-2 text-xs text-muted">{t('salaryOnly')}</p>
       </div>
 
       <button className="btn-ghost w-full" disabled={busy} onClick={() => run(() => api.skip(24), t('skipped'))}>

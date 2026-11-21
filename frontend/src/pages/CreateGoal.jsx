@@ -3,7 +3,7 @@ import { api } from '../api'
 import { useApp } from '../ctx'
 import { date, digitsOnly, groupDigits, months, uzs } from '../format'
 import BankCard from '../components/BankCard'
-import { BackButton, ConfirmSheet, Icon, Money, Row } from '../components/ui'
+import { BackButton, ConfirmSheet, Icon, Money, Row, SalaryOnlyNote } from '../components/ui'
 
 export default function CreateGoal() {
   const { state, t, lang, go, notify, refresh, openAgent } = useApp()
@@ -111,8 +111,10 @@ export default function CreateGoal() {
           <Row label={t('bestCase')}>≈ {months(pv.months_best, lang)}</Row>
           <Row label={t('worstCase')}>≈ {months(pv.months_worst, lang)}</Row>
           <Row label={t('deadline')} strong>{t('until', date(pv.expiry, lang))}</Row>
+          <div className="pb-3"><SalaryOnlyNote worstAnnual={state.income.worst_annual} /></div>
         </section>
       )}
+      {!pv && <SalaryOnlyNote worstAnnual={state.income.worst_annual} />}
       {err && <p className="text-rose-300">⚠ {err}</p>}
 
       <button className="btn-primary w-full !min-h-[56px] text-lg" disabled={!valid} onClick={() => setConfirm(true)}>{t('create')}</button>

@@ -46,6 +46,7 @@ export const api = {
   confirm: (id, option) => request('POST', `/agent/proposals/${encodeURIComponent(id)}/confirm`, option ? { option } : {}),
   reject: (id) => request('POST', `/agent/proposals/${encodeURIComponent(id)}/reject`),
   salary: (amount) => request('POST', '/demo/salary', { amount }),
+  transferIn: (amount, source) => request('POST', '/demo/transfer-in', { amount, source }),
   skip: (hours) => request('POST', '/demo/skip-time', { hours }),
   reset: () => request('POST', '/demo/reset'),
 }

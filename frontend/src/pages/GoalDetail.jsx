@@ -5,7 +5,7 @@ import { date, months, uzs } from '../format'
 import BankCard, { PALETTES, paletteFor } from '../components/BankCard'
 import ReorderSheet from '../components/ReorderSheet'
 import { coolingFor } from '../components/WalletStack'
-import { ConfirmSheet, Icon, Money, Row, Sheet } from '../components/ui'
+import { ConfirmSheet, Icon, Money, Row, SalaryOnlyNote, Sheet } from '../components/ui'
 
 // Card detail screen, structured like a real bank card screen:
 // tinted header with the card, three round actions, then list rows that open sheets.
@@ -86,6 +86,8 @@ export default function GoalDetail({ id }) {
         ))}
       </section>
 
+      <SalaryOnlyNote worstAnnual={state.income.worst_annual} />
+
       {/* row sheets */}
       <Sheet open={modal === 'info'} onClose={() => setModal(null)} label={t('rowGoal')}>
         <div className="px-6 pb-8 overflow-y-auto">
@@ -95,6 +97,7 @@ export default function GoalDetail({ id }) {
           {active && <Row label={t('bestCase')}>≈ {months(g.months_best, lang)}</Row>}
           {active && <Row label={t('worstCase')}>≈ {months(g.months_worst, lang)}</Row>}
           {active && <Row label={t('deadline')} strong>{t('until', date(g.expiry, lang))}</Row>}
+          <SalaryOnlyNote worstAnnual={state.income.worst_annual} />
           <p className="mt-4 text-sm text-muted flex gap-2"><Icon name="lock" size={18} className="shrink-0" />{t('lockShort')}</p>
         </div>
       </Sheet>

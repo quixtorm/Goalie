@@ -2,7 +2,7 @@ import { useApp } from '../ctx'
 import { date, dueText } from '../format'
 import WalletStack from '../components/WalletStack'
 import ProposalCard from '../components/ProposalCard'
-import { Chip, Icon, Money, Progress } from '../components/ui'
+import { Chip, Icon, Money, Progress, TypeChip } from '../components/ui'
 
 export default function Home() {
   const { state, t, lang, hidden, setHidden, go, openAgent } = useApp()
@@ -68,6 +68,14 @@ export default function Home() {
               <p className="text-muted text-sm">{t('income')}</p>
               <p className="text-emerald-300 font-semibold mt-1">+ <Money value={ts.income} /></p>
               <Progress className="mt-3" tone="green" value={ts.income > 0 ? 100 : 0} />
+              {/* split by type: only salary feeds the plan */}
+              <div className="mt-2 space-y-1">
+                {Object.entries(ts.income_by_type || {}).filter(([, v]) => v > 0).map(([ty, v]) => (
+                  <div key={ty} className="flex flex-wrap items-center justify-between gap-x-1 gap-y-0.5 text-xs min-w-0">
+                    <TypeChip type={ty} /><Money value={v} className="text-muted whitespace-nowrap" />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>
@@ -120,7 +128,8 @@ export default function Home() {
               <div key={tx.id} className="flex justify-between gap-3 py-3 border-b border-line last:border-0">
                 <span className="min-w-0">
                   <span className="block truncate">{tx.title}</span>
-                  <span className="text-sm text-muted">{date(tx.date, lang, false)}</span>
+                  <span className="text-sm text-muted flex items-center gap-2">{date(tx.date, lang, false)}
+                    {tx.amount > 0 && <TypeChip type={tx.type} />}</span>
                 </span>
                 <span className={`font-semibold shrink-0 ${tx.amount > 0 ? 'text-emerald-300' : ''}`}>
                   {tx.amount > 0 ? '+' : ''}<Money value={tx.amount} />

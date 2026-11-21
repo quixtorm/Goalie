@@ -84,6 +84,55 @@ def roll_income(history: list[int], salary: int) -> list[int]:
     return (history + [salary])[-INCOME_HISTORY_MONTHS:]
 
 
+# ---- income types: ONLY salary counts for planning ----
+SALARY, TRANSFER, OTHER = "SALARY", "TRANSFER", "OTHER"
+INCOME_TYPES = (SALARY, TRANSFER, OTHER)
+ANNUAL_WINDOW_MONTHS = 12
+
+
+def salary_amounts(records: list[dict]) -> list[int]:
+    """Salary amounts in date order. Transfers from family and other inflows are excluded on purpose:
+    they are irregular, so a plan built on them could break."""
+    return [r["amount"] for r in sorted(records, key=lambda r: r["date"]) if r["type"] == SALARY]
+
+
+def basis_from_records(records: list[dict], fallback_income: int | None = None) -> IncomeBasis:
+    """worst/avg MONTHLY income over the last INCOME_HISTORY_MONTHS salaries (salary only)."""
+    return income_basis(salary_amounts(records), fallback_income)
+
+
+def worst_monthly_income(records: list[dict]) -> int:
+    return basis_from_records(records).worst
+
+
+def avg_monthly_income(records: list[dict]) -> int:
+    return round_money(basis_from_records(records).avg)
+
+
+def worst_annual_income(records: list[dict]) -> int:
+    """Conservative yearly salary we plan on: worst month x 12 (salary only)."""
+    return worst_monthly_income(records) * 12
+
+
+def income_by_type(records: list[dict], today: date, months: int = ANNUAL_WINDOW_MONTHS) -> dict:
+    """Totals and counts per income type for the last `months` months (for display / the agent)."""
+    since = add_months(today, -months).isoformat()
+    out = {t: {"total": 0, "count": 0} for t in INCOME_TYPES}
+    for r in records:
+        if r["date"] >= since and r["type"] in out:  # window includes its first day
+            out[r["type"]]["total"] += r["amount"]
+            out[r["type"]]["count"] += 1
+    return {"months": months, "planning_basis": SALARY, "by_type": out}
+
+
+def transfer_save_suggestion(transfer: int, goal_percent: int, goal_remaining: int, main_balance: int) -> int:
+    """Optional extra saving from a transfer: the goal's own percent of the transfer,
+    capped by what the goal still needs and by what is on the main card."""
+    if transfer <= 0 or goal_remaining <= 0:
+        return 0
+    return max(0, min(round_money(Fraction(transfer * goal_percent, 100)), goal_remaining, main_balance))
+
+
 # ---- goals ----
 def monthly_contribution(percent: int, income: Fraction | int) -> Fraction:
     return Fraction(percent, 100) * Fraction(income)

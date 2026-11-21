@@ -145,6 +145,13 @@ T: dict[str, tuple[str, str]] = {
     "p_newobl_text": ("Добавить обязательный платёж {amount_sum} до {due_date}.",
                       "{due_date} gacha {amount_sum} majburiy to'lov qo'shish."),
     "p_add_obl": ("Добавить платёж", "To'lov qo'shish"),
+    "p_tr_title": ("Пришло {amount_sum} от: {source}", "{source}dan {amount_sum} keldi"),
+    "p_tr_text": ("Отложить часть на цель «{name}»? Предлагаю {pct}% от перевода — {sug_sum}. "
+                  "План и сроки от этого не меняются: они считаются только по зарплате.",
+                  "Bir qismini «{name}» maqsadiga ajratamizmi? O'tkazmaning {pct}% ini — {sug_sum} taklif qilaman. "
+                  "Reja va muddatlar o'zgarmaydi: ular faqat maosh bo'yicha hisoblanadi."),
+    "p_tr_save": ("Отложить {sug_sum}", "{sug_sum} ajratish"),
+    "r_tr_saved": ("Отложено {amount_sum} на «{name}».", "«{name}» uchun {amount_sum} ajratildi."),
     "r_set_pct": ("Готово: «{name}» — {pct}% дохода.", "Tayyor: «{name}» — daromadning {pct}%."),
     "r_topup": ("Переведено {amount_sum} в резерв.", "Zaxiraga {amount_sum} o'tkazildi."),
     "r_goal_created": ("Цель «{name}» создана.", "«{name}» maqsadi yaratildi."),
@@ -164,6 +171,8 @@ T: dict[str, tuple[str, str]] = {
     "gm_declined": ("Покупка отменена. Деньги остались на месте.", "Xarid bekor qilindi. Pul joyida qoldi."),
     # transactions
     "tx_salary": ("Зарплата", "Maosh"),
+    "tx_transfer": ("Перевод: {source}", "O'tkazma: {source}"),
+    "tx_extra": ("Дополнительно в цель «{name}»", "«{name}» maqsadiga qo'shimcha"),
     "tx_reserve": ("В резерв «{name}»", "«{name}» zaxirasiga"),
     "tx_pay": ("Оплата: {name}", "To'lov: {name}"),
     "tx_purchase": ("{label}: {merchant}", "{label}: {merchant}"),
@@ -241,6 +250,16 @@ T: dict[str, tuple[str, str]] = {
                "• До зарплаты {n_days}, на жизнь нужно примерно {need_sum}.",
                "Asosiy kartada {main_sum}. Bemalol {free_sum} sarflash mumkin.\n\n"
                "• Maoshgacha {n_days}, yashash uchun taxminan {need_sum} kerak."),
+    "f_income_why": ("План я считаю только по зарплате: она приходит регулярно. Самый низкий месяц зарплаты — "
+                     "{worst_sum}, это {annual_sum} в год.\n\n• Зарплата за 12 месяцев: {sal_n} раз, {sal_sum}\n"
+                     "• Переводы от близких: {tr_n} раз, {tr_sum} — приходят нерегулярно, поэтому план на них не "
+                     "строим.\n\nКогда приходит перевод, я предлагаю отложить часть на цель — только если вы "
+                     "подтвердите.",
+                     "Rejani faqat maosh bo'yicha hisoblayman: u muntazam keladi. Eng past maosh oyi — {worst_sum}, "
+                     "bu yiliga {annual_sum}.\n\n• 12 oydagi maosh: {sal_n} marta, {sal_sum}\n"
+                     "• Yaqinlardan o'tkazmalar: {tr_n} marta, {tr_sum} — tartibsiz keladi, shuning uchun reja ularga "
+                     "qurilmaydi.\n\nO'tkazma kelganda, bir qismini maqsadga ajratishni taklif qilaman — faqat siz "
+                     "tasdiqlasangiz."),
     "f_cash_gap": ("\n• ⚠ До зарплаты может не хватить — посмотрите предложения во входящих.",
                    "\n• ⚠ Maoshgacha yetmasligi mumkin — maslahatlarni ko'ring."),
 }

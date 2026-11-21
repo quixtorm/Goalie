@@ -199,6 +199,31 @@ export function ErrorBox({ text, onRetry }) {
   )
 }
 
+// Income type chip: Зарплата / Перевод / Другое (only salary counts for the plan)
+export function TypeChip({ type }) {
+  const { t } = useApp()
+  if (!type) return null
+  const cls = {
+    SALARY: 'bg-emerald-400/15 text-emerald-300 border-emerald-400/30',
+    TRANSFER: 'bg-violet-400/15 text-violet-200 border-violet-400/30',
+    OTHER: 'bg-white/10 text-muted border-line',
+  }[type] || 'bg-white/10 text-muted border-line'
+  return <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${cls}`}>{t(`type_${type}`)}</span>
+}
+
+// Plain-language note shown on every plan panel.
+export function SalaryOnlyNote({ worstAnnual }) {
+  const { t } = useApp()
+  return (
+    <div className="mt-3 rounded-[14px] bg-emerald-400/[0.07] border border-emerald-400/20 p-3 text-sm">
+      <p className="flex gap-2 text-ink/90"><Icon name="info" size={18} className="shrink-0 text-emerald-300 mt-0.5" />{t('salaryOnly')}</p>
+      {worstAnnual != null && (
+        <p className="mt-1.5 pl-[26px] text-muted">{t('worstAnnual')}: <Money value={worstAnnual} className="text-ink font-semibold" /></p>
+      )}
+    </div>
+  )
+}
+
 export function Row({ label, children, strong }) {
   return (
     <div className="flex items-baseline justify-between gap-4 py-3 border-b border-line last:border-0">

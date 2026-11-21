@@ -19,6 +19,7 @@ load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 import agent  # noqa: E402
 import calc  # noqa: E402
+import fallback  # noqa: E402
 import mcc as mcc_mod  # noqa: E402
 from calc import CalcError  # noqa: E402
 from mock_data import seed  # noqa: E402
@@ -151,6 +152,11 @@ class SalaryIn(Strict):
     amount: int = Money
 
 
+class TransferIn(Strict):
+    amount: int = Money
+    source: str = Field(min_length=1, max_length=60)
+
+
 class SkipIn(Strict):
     hours: int = Field(ge=1, le=720)
 
@@ -171,10 +177,14 @@ def state_view() -> dict:
         + sum(o.reserved for o in s.obligations.values() if not o.paid),
         "today_summary": {"spent": -sum(t["amount"] for t in today_tx if t["amount"] < 0),
                           "income": sum(t["amount"] for t in today_tx if t["amount"] > 0),
+                          "income_by_type": {ty: sum(t["amount"] for t in today_tx
+                                                     if t["amount"] > 0 and t.get("type") == ty)
+                                             for ty in calc.INCOME_TYPES},
                           "daily_baseline": calc.DAILY_SPEND_BASELINE},
         "proposals_pending": [proposals.view(p) for p in sorted(pend, key=lambda p: p.created_at, reverse=True)],
         "last_salary": s.last_salary,
-        "income": {"history": s.income_history, "worst": b.worst, "avg": calc.round_money(b.avg),
+        "income": {**fallback.income_view(s), "worst": b.worst, "avg": calc.round_money(b.avg),
+                   "salary_history": calc.salary_amounts(s.incomes)[-calc.ANNUAL_WINDOW_MONTHS:],
                    "next_income_date": s.next_income_date.isoformat()},
         "goals": [goals.view(s, g) for g in goal_list],
         "used_percent": budget.used_percent(s),
@@ -344,6 +354,14 @@ def demo_salary(body: SalaryIn):
     _demo_guard()
     with STORE.lock:
         return proposals.salary(STORE.state, body.amount)
+
+
+@app.post("/demo/transfer-in")
+def demo_transfer_in(body: TransferIn):
+    """Money from family etc.: credits the main card only. No contributions, no plan change."""
+    _demo_guard()
+    with STORE.lock:
+        return proposals.transfer_in(STORE.state, body.amount, body.source)
 
 
 @app.post("/demo/skip-time")

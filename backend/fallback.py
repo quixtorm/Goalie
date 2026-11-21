@@ -67,6 +67,9 @@ def parse(text: str) -> dict:
 
 def intent(text: str) -> str:
     t = text.lower()
+    if re.search(r"перевод|переводы|transfer|o'tkazma|o‘tkazma|oila|семь|родн|близк", t) and \
+            re.search(r"почему|учит|счита|nega|hisob|план|reja|не идут|kirmay", t):
+        return "income_types"
     if re.search(r"кредит|рассроч|займ|заем|заём|в долг взять|kredit|nasiya", t):
         return "credit"
     if re.search(r"накоп|копить|отлож|цел|мечт|собрать|yig'|yig‘|jamg'|maqsad|orzu", t):
@@ -90,6 +93,8 @@ def reply(s: State, message: str) -> dict:
             return _obligations(s)
         if kind == "cashflow":
             return _cashflow(s)
+        if kind == "income_types":
+            return _income_types(s)
     except CalcError as e:
         return {"reply": str(e), "proposals": []}
     return {"reply": tr("f_help"), "proposals": []}
@@ -154,6 +159,22 @@ def _obligations(s: State) -> dict:
     if pend:
         lines.append(tr("f_obl_prop"))
     return {"reply": "\n".join(lines), "proposals": pend}
+
+
+def _income_types(s: State) -> dict:
+    data = income_view(s)
+    bt = data["by_type"]
+    txt = tr("f_income_why", worst_sum=data["worst_monthly"], annual_sum=data["worst_annual"],
+             sal_n=bt["SALARY"]["count"], sal_sum=bt["SALARY"]["total"],
+             tr_n=bt["TRANSFER"]["count"], tr_sum=bt["TRANSFER"]["total"])
+    return {"reply": txt, "proposals": [], "data": data}
+
+
+def income_view(s: State) -> dict:
+    """Same numbers as the agent tool list_income_by_type (all from calc.py)."""
+    by = calc.income_by_type(s.incomes, s.today)
+    return {**by, "worst_monthly": calc.worst_monthly_income(s.incomes),
+            "avg_monthly": calc.avg_monthly_income(s.incomes), "worst_annual": calc.worst_annual_income(s.incomes)}
 
 
 def _cashflow(s: State) -> dict:

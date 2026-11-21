@@ -109,3 +109,21 @@ def test_step6_new_debt_topup(c):
     assert st["main"]["main_balance"] == before - 1_500_000
     debt = next(o for o in st["obligations"] if o["name"] == "Долг брату")
     assert debt["reserved"] == 1_500_000 and debt["status"] == "ok"
+
+
+def test_step7_family_transfer_does_not_change_the_plan(c):
+    before = car(c)
+    r = c.post("/demo/transfer-in", json={"amount": 2_000_000, "source": "Семья"})
+    assert r.status_code == 200
+    after = car(c)
+    # plan untouched: same percent, deadline, months, saved
+    for k in ("percent", "expiry", "months_worst", "months_best", "saved", "priority"):
+        assert after[k] == before[k], k
+    props = inbox(c, "transfer_save")
+    assert len(props) == 1
+    p = props[0]
+    assert p["numbers"]["goal_id"] == before["id"] and p["numbers"]["suggested"] == 440_000  # 22% of 2 000 000
+    c.post(f"/agent/proposals/{p['id']}/confirm")
+    g = car(c)
+    assert g["saved"] == before["saved"] + 440_000 and g["progress"] >= before["progress"]
+    assert g["percent"] == 22 and g["expiry"] == before["expiry"]

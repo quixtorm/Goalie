@@ -76,7 +76,8 @@ class Proposal:
 @dataclass
 class State:
     clock: datetime
-    income_history: list[int]
+    # every inflow: {id, date, amount, type: SALARY|TRANSFER|OTHER, source, offer_open?}. Only SALARY plans.
+    incomes: list[dict[str, Any]]
     main_balance: int
     next_income_date: date
     goals: dict[str, Goal] = field(default_factory=dict)
@@ -91,11 +92,17 @@ class State:
         return self.clock.date()
 
     def add_tx(self, title: str | dict, amount: int, source: str = "main", mcc: str | None = None,
-               internal: bool = False) -> None:
+               internal: bool = False, income_type: str | None = None) -> None:
         self.transactions.insert(0, {
             "id": new_id("tx"), "date": self.today.isoformat(), "title": title,
-            "amount": amount, "source": source, "mcc": mcc, "internal": internal,
+            "amount": amount, "source": source, "mcc": mcc, "internal": internal, "type": income_type,
         })
+
+    def add_income(self, amount: int, income_type: str, source, offer_open: bool = False) -> dict:
+        rec = {"id": new_id("inc"), "date": self.today.isoformat(), "amount": amount, "type": income_type,
+               "source": source, "offer_open": offer_open}
+        self.incomes.append(rec)
+        return rec
         del self.transactions[50:]
 
 

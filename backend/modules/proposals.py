@@ -11,7 +11,7 @@ import calc
 from calc import CalcError
 from modules import budget, goals, guardian, obligations
 from state import Proposal, State, new_id
-from texts import disp, loc, msg, render, tr
+from texts import both, disp, loc, msg, render, tr
 
 
 def _add(s: State, kind: str, key: str, title, text, options: list[dict], numbers: dict,
@@ -101,6 +101,23 @@ def agent_review(s: State) -> None:
              msg("p_cool_text", merchant=st.merchant, amount_sum=st.amount), opts,
              {"stop_id": st.id, "amount": st.amount, "merchant": st.merchant})
 
+    # 5. transfer from family: optional extra saving to goal #1 (never automatic)
+    top = next(iter(budget.active_goals(s)), None)
+    for rec in s.incomes:
+        if rec["type"] != calc.TRANSFER or not rec.get("offer_open") or not top:
+            continue
+        sug = calc.transfer_save_suggestion(rec["amount"], top.percent, max(0, top.amount - top.saved), s.main_balance)
+        if sug <= 0:
+            continue
+        key = f"transfer:{rec['id']}:{top.id}:{sug}"
+        valid.add(key)
+        _add(s, "transfer_save", key, msg("p_tr_title", amount_sum=rec["amount"], source=rec["source"]),
+             msg("p_tr_text", name=loc(top), pct=top.percent, sug_sum=sug),
+             [{"key": "apply", "label": msg("p_tr_save", sug_sum=sug),
+               "action": {"type": "save_transfer", "params": {"goal_id": top.id, "amount": sug, "income_id": rec["id"]}}}],
+             {"income_id": rec["id"], "transfer": rec["amount"], "goal_id": top.id, "percent": top.percent,
+              "suggested": sug})
+
     # resolve stale agent proposals
     for p in s.proposals.values():
         if p.origin == "agent" and p.status == "pending" and p.condition_key not in valid:
@@ -151,6 +168,10 @@ def apply(s: State, proposal_id: str, option_key: str | None = None) -> dict:
         from datetime import date
         o = obligations.create(s, prm["name"], prm["amount"], date.fromisoformat(prm["due_date"]))
         result = msg("r_obl_added", name=loc(o))
+    elif t == "save_transfer":
+        g = goals.add_extra(s, prm["goal_id"], prm["amount"])
+        _close_offer(s, prm.get("income_id"))
+        result = msg("r_tr_saved", amount_sum=prm["amount"], name=loc(g))
     else:
         raise CalcError(tr("err_unknown_action"))
     p.status, p.result = "confirmed", result
@@ -165,6 +186,8 @@ def reject(s: State, proposal_id: str) -> dict:
     if p.status != "pending":
         raise CalcError(tr("err_prop_done"))
     p.status = "rejected"
+    if p.kind == "transfer_save":
+        _close_offer(s, p.numbers.get("income_id"))  # rejected: never offered again, nothing moved
     return {"status": "rejected"}
 
 
@@ -183,7 +206,7 @@ def view(p: Proposal) -> dict:
 def salary(s: State, amount: int) -> dict:
     if amount <= 0 or amount > calc.MAX_AMOUNT:
         raise CalcError(tr("err_salary_positive"))
-    s.income_history = calc.roll_income(s.income_history, amount)
+    s.add_income(amount, calc.SALARY, both("Зарплата", "Ish haqi"))  # only SALARY records drive the plan
     # bonus for the past month, before new contributions
     for g in budget.active_goals(s):
         g.accrued_bonus += calc.monthly_bonus(g.saved, g.disciplined)
@@ -212,11 +235,29 @@ def salary(s: State, amount: int) -> dict:
     budget.renumber(s)
     s.main_balance += left
     flow["main"] = left
-    s.add_tx(msg("tx_salary"), amount)
+    s.add_tx(msg("tx_salary"), amount, income_type=calc.SALARY)
     s.next_income_date = s.today + timedelta(days=calc.PAYDAY_INTERVAL_DAYS)
     s.last_salary = {**flow, "date": s.today.isoformat()}
     agent_review(s)
     return flow
+
+
+def transfer_in(s: State, amount: int, source: str) -> dict:
+    """Money from a person (family etc.). Credits the main card ONLY: no contributions, no plan change.
+    agent_review() then offers an OPTIONAL extra saving that needs the user's confirmation."""
+    if amount <= 0 or amount > calc.MAX_AMOUNT:
+        raise CalcError(tr("err_amount_positive"))
+    rec = s.add_income(amount, calc.TRANSFER, source, offer_open=True)
+    s.main_balance += amount
+    s.add_tx(msg("tx_transfer", source=source), amount, income_type=calc.TRANSFER)
+    agent_review(s)
+    return {"income_id": rec["id"], "amount": amount, "type": calc.TRANSFER, "main_balance": s.main_balance}
+
+
+def _close_offer(s: State, income_id: str | None) -> None:
+    for r in s.incomes:
+        if r["id"] == income_id:
+            r["offer_open"] = False
 
 
 def skip_time(s: State, hours: int) -> None:

@@ -84,6 +84,22 @@ def set_percent(s: State, goal_id: str, percent: int) -> Goal:
     return g
 
 
+def add_extra(s: State, goal_id: str, amount: int) -> Goal:
+    """Confirmed extra saving (e.g. part of a family transfer): main card -> goal. Does not change the plan."""
+    g = get(s, goal_id)
+    if g.status != "active":
+        raise CalcError(tr("err_goal_unavailable"))
+    if amount <= 0 or amount > s.main_balance or amount > g.amount - g.saved:
+        raise CalcError(tr("err_money_insufficient"))
+    s.main_balance -= amount
+    g.saved += amount
+    s.add_tx(msg("tx_extra", name=loc(g)), -amount, internal=True)
+    if g.saved >= g.amount:
+        g.status = "completed"
+        budget.renumber(s)
+    return g
+
+
 def get(s: State, goal_id: str) -> Goal:
     g = s.goals.get(goal_id)
     if not g:
