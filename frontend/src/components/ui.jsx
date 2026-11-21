@@ -90,18 +90,24 @@ export function Chip({ tone = 'slate', icon, children }) {
   )
 }
 
+// Page scroll lock shared by all open sheets: counted, so overlapping sheets can never leave the page locked.
+let openSheets = 0
+function lockScroll() { if (openSheets++ === 0) document.body.style.overflow = 'hidden' }
+function unlockScroll() { openSheets = Math.max(0, openSheets - 1); if (openSheets === 0) document.body.style.overflow = '' }
+
 // ---------- bottom sheet: slide-up, swipe down / tap outside / Esc to close ----------
 export function Sheet({ open, onClose, children, full = false, label, z = 50 }) {
   const [dy, setDy] = useState(0)
   const start = useRef(null)
+  const closeRef = useRef(onClose)
+  closeRef.current = onClose
   useEffect(() => {
     if (!open) return
-    const onKey = (e) => e.key === 'Escape' && onClose?.()
+    const onKey = (e) => e.key === 'Escape' && closeRef.current?.()
     window.addEventListener('keydown', onKey)
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = prev; setDy(0) }
-  }, [open, onClose])
+    lockScroll()
+    return () => { window.removeEventListener('keydown', onKey); unlockScroll(); setDy(0) }
+  }, [open])
   if (!open) return null
 
   const down = (e) => { start.current = e.clientY; e.currentTarget.setPointerCapture?.(e.pointerId) }

@@ -1,18 +1,30 @@
 // All calls go through the Vite proxy (/api -> FastAPI). No secrets live in the frontend.
+// Every request carries X-Lang so server texts (tips, errors, guardian messages) come back in the UI language.
+// Single source of truth: <html lang>, set by App before it loads data (a module variable can be duplicated
+// by hot-reload, a DOM attribute cannot).
+export const setApiLang = (l) => { document.documentElement.lang = l === 'uz' ? 'uz' : 'ru' }
+const currentLang = () => (document.documentElement.lang === 'uz' ? 'uz' : 'ru')
+
+const NET_ERR = {
+  ru: ['Нет связи с сервером. Проверьте, что бэкенд запущен.', 'Что-то пошло не так. Попробуйте ещё раз.'],
+  uz: ["Server bilan aloqa yo'q. Backend ishga tushganini tekshiring.", "Nimadir xato ketdi. Qayta urinib ko'ring."],
+}
+
 async function request(method, path, body) {
+  const LANG = currentLang()
   let res
   try {
     res = await fetch(`/api${path}`, {
       method,
-      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      headers: { 'X-Lang': LANG, ...(body ? { 'Content-Type': 'application/json' } : {}) },
       body: body ? JSON.stringify(body) : undefined,
     })
   } catch {
-    throw new Error('Нет связи с сервером. Проверьте, что бэкенд запущен.')
+    throw new Error(NET_ERR[LANG][0])
   }
   let data = null
   try { data = await res.json() } catch { /* empty body */ }
-  if (!res.ok) throw new Error(data?.detail || 'Что-то пошло не так. Попробуйте ещё раз.')
+  if (!res.ok) throw new Error(data?.detail || NET_ERR[LANG][1])
   return data
 }
 

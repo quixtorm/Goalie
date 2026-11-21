@@ -7,6 +7,7 @@ import calc
 from calc import CalcError
 from modules import budget
 from state import Goal, State, new_id
+from texts import disp, loc, msg, tr
 
 
 def forecast(s: State, g: Goal) -> calc.GoalForecast:
@@ -16,7 +17,7 @@ def forecast(s: State, g: Goal) -> calc.GoalForecast:
 def view(s: State, g: Goal) -> dict:
     f = forecast(s, g)
     return {
-        "id": g.id, "name": g.name, "amount": g.amount, "saved": g.saved, "percent": g.percent,
+        "id": g.id, "name": disp(g), "amount": g.amount, "saved": g.saved, "percent": g.percent,
         "priority": g.priority,
         "progress": min(100, round(g.saved * 100 / g.amount)) if g.amount else 0,
         "remaining": f.remaining, "months_worst": f.months_worst, "months_best": f.months_best,
@@ -68,7 +69,7 @@ def reorder(s: State, ids: list[str]) -> list[Goal]:
     """ids = active goal ids from highest to lowest priority. Must list each active goal exactly once."""
     active = {g.id for g in budget.active_goals(s)}
     if len(ids) != len(set(ids)) or set(ids) != active:
-        raise CalcError("Список целей не совпадает с активными целями")
+        raise CalcError(tr("err_reorder"))
     for i, gid in enumerate(ids, start=1):
         s.goals[gid].priority = i
     return budget.active_goals(s)
@@ -77,7 +78,7 @@ def reorder(s: State, ids: list[str]) -> list[Goal]:
 def set_percent(s: State, goal_id: str, percent: int) -> Goal:
     g = get(s, goal_id)
     if percent < calc.MIN_PERCENT or budget.used_percent(s, g.id) + percent > calc.MAX_TOTAL_PERCENT:
-        raise CalcError(f"Сумма процентов по целям не может быть больше {calc.MAX_TOTAL_PERCENT}%")
+        raise CalcError(tr("err_total_pct", max=calc.MAX_TOTAL_PERCENT))
     g.percent = percent
     g.planned_months_left = forecast(s, g).months_worst
     return g
@@ -86,17 +87,17 @@ def set_percent(s: State, goal_id: str, percent: int) -> Goal:
 def get(s: State, goal_id: str) -> Goal:
     g = s.goals.get(goal_id)
     if not g:
-        raise KeyError("Цель не найдена")
+        raise KeyError(tr("err_goal_not_found"))
     return g
 
 
 def use(s: State, goal_id: str) -> dict:
     g = get(s, goal_id)
     if g.status not in ("active", "completed") or g.saved < g.amount:
-        raise CalcError("Цель ещё не накоплена")
+        raise CalcError(tr("err_goal_not_ready"))
     payout = g.saved + g.accrued_bonus
     s.main_balance += payout
-    s.add_tx(f"Цель «{g.name}» достигнута (с бонусом {calc.fmt_uzs(g.accrued_bonus)})", payout)
+    s.add_tx(msg("tx_goal_used", name=loc(g), bonus_sum=g.accrued_bonus), payout)
     g.saved, g.status = 0, "used"
     budget.renumber(s)
     return {"payout": payout, "bonus": g.accrued_bonus}
@@ -105,7 +106,7 @@ def use(s: State, goal_id: str) -> dict:
 def start_close(s: State, goal_id: str) -> dict:
     g = get(s, goal_id)
     if g.status != "active":
-        raise CalcError("Эту цель нельзя закрыть")
+        raise CalcError(tr("err_goal_cant_close"))
     g.status = "closing"
     g.close_ready_at = s.clock + timedelta(hours=calc.COOLDOWN_HOURS)
     lost = g.accrued_bonus
@@ -117,12 +118,12 @@ def finish_closures(s: State) -> None:
     for g in s.goals.values():
         if g.status == "closing" and g.close_ready_at and s.clock >= g.close_ready_at:
             s.main_balance += g.saved
-            s.add_tx(f"Цель «{g.name}» закрыта, деньги вернулись", g.saved)
+            s.add_tx(msg("tx_goal_closed", name=loc(g)), g.saved)
             g.saved, g.accrued_bonus, g.status = 0, 0, "closed"
     budget.renumber(s)
 
 
 def credit_impact(s: State, payment: int) -> list[dict]:
-    goals = [{"id": g.id, "name": g.name, "amount": g.amount, "saved": g.saved, "percent": g.percent}
+    goals = [{"id": g.id, "name": disp(g), "amount": g.amount, "saved": g.saved, "percent": g.percent}
              for g in budget.active_goals(s)]
     return [i.__dict__ for i in calc.credit_impact_on_goals(payment, goals, budget.basis(s))]

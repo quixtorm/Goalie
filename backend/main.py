@@ -24,6 +24,7 @@ from calc import CalcError  # noqa: E402
 from mock_data import seed  # noqa: E402
 from modules import budget, goals, guardian, obligations, proposals  # noqa: E402
 from state import Store  # noqa: E402
+from texts import render, set_lang, tr  # noqa: E402
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("api")
@@ -31,13 +32,29 @@ log = logging.getLogger("api")
 STORE = Store(seed)
 DEMO_MODE = os.getenv("DEMO_MODE", "false").lower() == "true"
 
-app = FastAPI(title="Мечта и Щит — демо", docs_url="/docs" if DEMO_MODE else None, redoc_url=None)
+app = FastAPI(title="SmartGoal demo", docs_url="/docs" if DEMO_MODE else None, redoc_url=None)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type"],
+    allow_headers=["Content-Type", "X-Lang"],
 )
+
+
+class LangMiddleware:
+    """Pure ASGI: sets the request language (X-Lang: ru|uz) before the endpoint and error handlers run."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http":
+            raw = dict(scope.get("headers") or []).get(b"x-lang", b"ru").decode("latin-1", "ignore").strip().lower()
+            set_lang(raw)
+        await self.app(scope, receive, send)
+
+
+app.add_middleware(LangMiddleware)
 
 
 @app.middleware("http")
@@ -57,19 +74,19 @@ async def calc_error(_: Request, e: CalcError):
 
 @app.exception_handler(KeyError)
 async def not_found(_: Request, e: KeyError):
-    return JSONResponse(status_code=404, content={"detail": e.args[0] if e.args else "Не найдено"})
+    return JSONResponse(status_code=404, content={"detail": e.args[0] if e.args else tr("err_not_found")})
 
 
 @app.exception_handler(RequestValidationError)
 async def bad_input(_: Request, e: RequestValidationError):
     fields = sorted({str(err["loc"][-1]) for err in e.errors() if err.get("loc")})
-    return JSONResponse(status_code=422, content={"detail": "Проверьте введённые данные", "fields": fields})
+    return JSONResponse(status_code=422, content={"detail": tr("err_bad_input"), "fields": fields})
 
 
 @app.exception_handler(Exception)
 async def internal(_: Request, e: Exception):
     log.error("Unhandled error: %s", type(e).__name__)
-    return JSONResponse(status_code=500, content={"detail": "Что-то пошло не так. Попробуйте ещё раз."})
+    return JSONResponse(status_code=500, content={"detail": tr("err_internal")})
 
 
 # ---- input models (bounded, no unknown fields) ----
@@ -167,9 +184,9 @@ def state_view() -> dict:
         "obligations": sorted([obligations.view(s, o) for o in s.obligations.values() if not o.paid],
                               key=lambda x: x["due_date"]),
         "inbox_count": len(pend),
-        "stops": [{"id": st.id, "status": st.status, "options": guardian.options_for(st), **st.numbers}
+        "stops": [{"id": st.id, **guardian.stop_view(s, st)}
                   for st in s.stops.values() if st.status in ("open", "cooling")],
-        "transactions": s.transactions[:15],
+        "transactions": [{**t, "title": render(t["title"])} for t in s.transactions[:15]],
         "demo_mode": DEMO_MODE,
     }
 
@@ -184,13 +201,13 @@ def get_state():
 
 @app.get("/mcc")
 def mcc_list():
-    return [{"mcc": k, "label": v[1], "category": v[0].value} for k, v in mcc_mod.MCC_TABLE.items()]
+    return [{"mcc": k, "label": mcc_mod.label(k), "category": v[0].value} for k, v in mcc_mod.MCC_TABLE.items()]
 
 
 @app.get("/calc/preview")
 def calc_preview(amount: int, percent: int):
     if not (0 < amount <= calc.MAX_AMOUNT) or not (1 <= percent <= calc.MAX_TOTAL_PERCENT):
-        raise CalcError("Проверьте сумму и процент")
+        raise CalcError(tr("err_check_amount_pct"))
     with STORE.lock:
         return goals.preview(STORE.state, amount, percent)
 
@@ -198,7 +215,7 @@ def calc_preview(amount: int, percent: int):
 @app.get("/calc/suggest")
 def calc_suggest(amount: int, months: int):
     if not (0 < amount <= calc.MAX_AMOUNT) or not (1 <= months <= calc.MAX_MONTHS):
-        raise CalcError("Проверьте сумму и срок")
+        raise CalcError(tr("err_check_amount_term"))
     with STORE.lock:
         return goals.suggest(STORE.state, amount, months)
 
@@ -233,7 +250,7 @@ def use_subcard(goal_id: str):
 @app.post("/subcards/{goal_id}/cancel")
 def cancel_subcard(goal_id: str, body: ConfirmIn):
     if not body.confirm:
-        raise CalcError("Нужно подтверждение")
+        raise CalcError(tr("err_need_confirm"))
     with STORE.lock:
         return goals.start_close(STORE.state, goal_id)
 
@@ -255,7 +272,7 @@ def create_obligation(body: ObligationIn):
 @app.post("/obligations/{obl_id}/pay")
 def pay_obligation(obl_id: str, body: ConfirmIn):
     if not body.confirm:
-        raise CalcError("Нужно подтверждение")
+        raise CalcError(tr("err_need_confirm"))
     with STORE.lock:
         res = obligations.pay(STORE.state, obl_id)
         agent.agent_review(STORE.state)
@@ -289,9 +306,10 @@ def agent_chat(body: ChatIn):
     while _chat_hits and now - _chat_hits[0] > 60:
         _chat_hits.popleft()
     if len(_chat_hits) >= CHAT_LIMIT_PER_MIN:
-        return JSONResponse(status_code=429, content={"detail": "Слишком много сообщений. Подождите минуту."})
+        return JSONResponse(status_code=429, content={"detail": tr("err_rate_limit")})
     _chat_hits.append(now)
     with STORE.lock:
+        set_lang(body.lang)  # the chat body wins over the header
         return agent.chat(STORE.state, body.message, [t.model_dump() for t in body.history], body.lang)
 
 
@@ -318,7 +336,7 @@ def reject_proposal(pid: str):
 # ---- demo controls (DEMO_MODE only) ----
 def _demo_guard():
     if not DEMO_MODE:
-        raise KeyError("Не найдено")
+        raise KeyError(tr("err_not_found"))
 
 
 @app.post("/demo/salary")

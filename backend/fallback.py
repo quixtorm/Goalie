@@ -11,7 +11,7 @@ import calc
 from calc import CalcError
 from modules import budget, goals, obligations, proposals
 from state import State
-from textfmt import LOCK_WARNING, days, fmt_date, fmt_uzs, months
+from texts import tr
 
 UNITS = {"млрд": 10**9, "миллиард": 10**9, "млн": 10**6, "миллион": 10**6, "тыс": 10**3, "k": 10**3, "к": 10**3,
          "mlrd": 10**9, "milliard": 10**9, "mln": 10**6, "million": 10**6, "ming": 10**3}
@@ -92,83 +92,74 @@ def reply(s: State, message: str) -> dict:
             return _cashflow(s)
     except CalcError as e:
         return {"reply": str(e), "proposals": []}
-    return {"reply": ("Я помогаю с деньгами: копить на цель, проверить кредит, следить за обязательными "
-                      "платежами и подсказать, сколько можно потратить. Например: «Хочу накопить 50 млн на "
-                      "машину за 3 года»."), "proposals": []}
+    return {"reply": tr("f_help"), "proposals": []}
 
 
 def _goal(s: State, p: dict) -> dict:
     if "amount" not in p:
-        return {"reply": "Сколько хотите накопить? Например: «50 млн на машину за 3 года».", "proposals": []}
+        return {"reply": tr("f_ask_amount"), "proposals": []}
     if "months" not in p:
-        return {"reply": f"За какой срок хотите накопить {fmt_uzs(p['amount'])}? Например: «за 3 года».",
-                "proposals": []}
-    name = p.get("name", "Новая цель")
+        return {"reply": tr("f_ask_term", amount_sum=p["amount"]), "proposals": []}
+    name = p.get("name") or tr("f_new_goal")
     sg = goals.suggest(s, p["amount"], p["months"])
     pct = sg["percent"]
     if sg["feasible"]:
-        head = (f"Чтобы накопить {fmt_uzs(p['amount'])} на «{name}» за {months(p['months'])}, "
-                f"откладывайте {pct}% дохода — это {fmt_uzs(sg['contribution_worst'])} в месяц.")
+        head = tr("f_goal_ok", amount_sum=p["amount"], name=name, term_months=p["months"], pct=pct,
+                  contrib_sum=sg["contribution_worst"])
     else:
-        head = (f"За {months(p['months'])} не получится: нужно {sg['raw_percent']}% дохода, "
-                f"а свободно максимум {sg['cap_percent']}% (уже {sg['used_percent']}% идёт на другие цели). "
-                f"При {pct}% цель займёт {months(sg['months_worst'])}.")
-    body = (f"\n\n• Лучший случай: {months(sg['months_best'])}\n• Худший случай: {months(sg['months_worst'])}"
-            f"\n• Срок цели: до {fmt_date(sg['expiry'])}\n\n{LOCK_WARNING}\n\nСоздать цель?")
+        head = tr("f_goal_cap", term_months=p["months"], raw=sg["raw_percent"], cap=sg["cap_percent"],
+                  used=sg["used_percent"], pct=pct, worst_months=sg["months_worst"])
+    body = tr("f_goal_body", best_months=sg["months_best"], worst_months=sg["months_worst"],
+              expiry_date=sg["expiry"], lock=tr("lock"))
     prop = proposals.propose_goal(s, name, p["amount"], pct)
     return {"reply": head + body, "proposals": [proposals.view(prop)], "data": sg}
 
 
 def _credit(s: State, p: dict) -> dict:
-    missing = [w for k, w in (("amount", "сумму"), ("months", "срок"), ("rate", "процентную ставку")) if k not in p]
+    missing = [tr(w) for k, w in (("amount", "w_amount"), ("months", "w_term"), ("rate", "w_rate")) if k not in p]
     if missing:
-        return {"reply": f"Чтобы посчитать кредит, назовите {', '.join(missing)}. "
-                         f"Например: «20 млн на 12 месяцев под 28%».", "proposals": []}
+        return {"reply": tr("f_credit_missing", missing=", ".join(missing)), "proposals": []}
     b = budget.basis(s)
     r = calc.calc_credit(p["amount"], p["rate"], p["months"], b, budget.monthly_obligations(s),
                          budget.goal_percents(s))
     impact = goals.credit_impact(s, r.payment)
-    lines = [f"Платёж — {fmt_uzs(r.payment)} в месяц, переплата {fmt_uzs(r.overpayment)}."]
-    lines.append(f"\n• Это {r.dti_percent}% вашего самого низкого дохода (безопасно — до 40%).")
+    lines = [tr("f_credit_head", pay_sum=r.payment, over_sum=r.overpayment), tr("f_credit_dti", dti=r.dti_percent)]
     if r.cashflow_risk:
-        lines.append(f"• ⚠ После обязательных платежей и целей остаётся {fmt_uzs(r.free_money)} в месяц — "
-                     f"платёж больше этой суммы.")
+        lines.append(tr("f_credit_cash", free_sum=r.free_money))
     elif r.dti_risk:
-        lines.append("• ⚠ Платёж больше 40% дохода — это высокий риск.")
+        lines.append(tr("f_credit_dti_risk"))
     else:
-        lines.append(f"• После платежа останется {fmt_uzs(r.free_money - r.payment)} свободных денег в месяц.")
+        lines.append(tr("f_credit_left", left_sum=r.free_money - r.payment))
     for i in impact:
         if i["months_after"] is None:
-            lines.append(f"• «{i['name']}»: при таком платеже копить не получится.")
+            lines.append(tr("f_credit_never", name=i["name"]))
         elif i["delay_months"]:
-            lines.append(f"• «{i['name']}»: {i['months_before']} → {i['months_after']} мес. "
-                         f"(+{months(i['delay_months'])})")
-    lines.append("\nВарианты: 1) взять меньшую сумму или на дольше; 2) сначала накопить часть; "
-                 "3) отказаться от покупки. Конкретные банки я не советую. Что посчитать дальше?")
-    return {"reply": "\n".join(lines), "proposals": [],
-            "data": {**r.__dict__, "impact": impact}}
+            lines.append(tr("f_credit_delay", name=i["name"], before=i["months_before"], after=i["months_after"],
+                            delay_months=i["delay_months"]))
+    lines.append(tr("f_credit_options"))
+    return {"reply": "\n".join(lines), "proposals": [], "data": {**r.__dict__, "impact": impact}}
 
 
 def _obligations(s: State) -> dict:
     items = [obligations.view(s, o) for o in s.obligations.values() if not o.paid]
     if not items:
-        return {"reply": "Обязательных платежей пока нет.", "proposals": []}
-    lines = ["Ваши обязательные платежи:"]
+        return {"reply": tr("f_obl_none"), "proposals": []}
+    lines = [tr("f_obl_head")]
     for o in sorted(items, key=lambda x: x["due_date"]):
-        mark = "✓ хватает" if o["shortfall"] == 0 else f"⚠ не хватает {fmt_uzs(o['shortfall'])}"
-        lines.append(f"• {o['name']}: {fmt_uzs(o['amount'])}, через {days(o['due_in_days'])} — {mark}")
+        mark = tr("f_obl_ok") if o["shortfall"] == 0 else tr("f_obl_short", short_sum=o["shortfall"])
+        when = tr("when_in", n_days=o["due_in_days"]) if o["due_in_days"] else tr("when_today")
+        lines.append(tr("f_obl_line", name=o["name"], amount_sum=o["amount"], when=when, mark=mark))
     pend = [proposals.view(p) for p in s.proposals.values()
             if p.kind == "obligation_topup" and p.status == "pending"]
     if pend:
-        lines.append("\nЯ подготовил предложение, как закрыть нехватку.")
+        lines.append(tr("f_obl_prop"))
     return {"reply": "\n".join(lines), "proposals": pend}
 
 
 def _cashflow(s: State) -> dict:
     cf = budget.cashflow_view(s)
-    txt = (f"На основной карте {fmt_uzs(cf['main_balance'])}. Можно спокойно тратить {fmt_uzs(cf['free_to_spend'])}."
-           f"\n\n• До зарплаты {days(cf['days_until_next_income'])}, на жизнь нужно примерно "
-           f"{fmt_uzs(cf['needed_until_payday'])}.")
+    txt = tr("f_cash", main_sum=cf["main_balance"], free_sum=cf["free_to_spend"], n_days=cf["days_until_next_income"],
+             need_sum=cf["needed_until_payday"])
     if cf["cash_gap"]:
-        txt += "\n• ⚠ До зарплаты может не хватить — посмотрите предложения во входящих."
+        txt += tr("f_cash_gap")
     return {"reply": txt, "proposals": [], "data": cf}

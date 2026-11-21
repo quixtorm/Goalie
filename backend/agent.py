@@ -12,6 +12,7 @@ import fallback
 from modules import proposals
 from modules.proposals import agent_review  # noqa: F401  (re-export)
 from state import State
+from texts import tr
 
 log = logging.getLogger("agent")
 
@@ -31,8 +32,8 @@ def chat(s: State, message: str, history: list[dict], lang: str = "ru") -> dict:
             res = proposals.apply(s, pend[0].id)
             return {"reply": res["message"], "proposals": [], "source": "code"}
         if not pend:
-            return {"reply": "Сейчас нечего подтверждать. Чем помочь?", "proposals": [], "source": "code"}
-        return {"reply": "Есть несколько предложений — нажмите «Подтвердить» на нужном.",
+            return {"reply": tr("a_nothing"), "proposals": [], "source": "code"}
+        return {"reply": tr("a_several"),
                 "proposals": [proposals.view(p) for p in pend], "source": "code"}
 
     # 2. LLM, if configured

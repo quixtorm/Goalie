@@ -26,6 +26,7 @@ class Goal:
     status: str = "active"  # active | completed | used | closing | closed
     close_ready_at: datetime | None = None
     priority: int = 0  # 1 = highest; 0 = not active (completed/closed)
+    names: dict[str, str] | None = None  # optional per-language display names (seed data)
 
 
 @dataclass
@@ -37,6 +38,7 @@ class Obligation:
     reserved: int = 0
     paid: bool = False
     monthly: bool = False
+    names: dict[str, str] | None = None
 
 
 @dataclass
@@ -88,7 +90,7 @@ class State:
     def today(self) -> date:
         return self.clock.date()
 
-    def add_tx(self, title: str, amount: int, source: str = "main", mcc: str | None = None,
+    def add_tx(self, title: str | dict, amount: int, source: str = "main", mcc: str | None = None,
                internal: bool = False) -> None:
         self.transactions.insert(0, {
             "id": new_id("tx"), "date": self.today.isoformat(), "title": title,

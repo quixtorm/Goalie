@@ -21,6 +21,7 @@ import calc
 from calc import CalcError
 from modules import budget, goals, obligations, proposals
 from state import State
+from texts import tr
 
 log = logging.getLogger("llm")
 
@@ -185,11 +186,11 @@ def _run_tool(s: State, name: str, args: dict, created: list) -> dict:
     if name == "propose_obligation":
         a = OblP(**args)
         if a.due_date < s.today:
-            raise CalcError("Дата платежа уже прошла")
+            raise CalcError(tr("err_date_past"))
         p = proposals.propose_obligation(s, a.name, a.amount, a.due_date.isoformat())
         created.append(p)
         return {"proposal_id": p.id, "status": "waiting_for_user_confirmation"}
-    raise CalcError(f"Неизвестный инструмент {name}")
+    raise CalcError(tr("err_unknown_tool"))
 
 
 _client: anthropic.Anthropic | None = None
@@ -242,7 +243,7 @@ def chat(s: State, message: str, history: list[dict], lang: str = "ru") -> dict 
                 results.append({"type": "tool_result", "tool_use_id": b.id,
                                 "content": json.dumps(out, ensure_ascii=False, default=str)})
             except (CalcError, ValidationError, ValueError, KeyError) as e:
-                msg = str(e) if isinstance(e, CalcError) else "Неверные данные для расчёта"
+                msg = str(e) if isinstance(e, CalcError) else tr("err_bad_calc_data")
                 results.append({"type": "tool_result", "tool_use_id": b.id, "content": msg, "is_error": True})
         msgs.append({"role": "user", "content": results})  # all results in ONE message
     log.warning("LLM exceeded tool rounds -> fallback")

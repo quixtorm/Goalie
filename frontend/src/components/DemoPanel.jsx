@@ -1,20 +1,20 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 import { useApp } from '../ctx'
-import { digitsOnly, groupDigits, uzs } from '../format'
+import { date, digitsOnly, groupDigits, uzs } from '../format'
 import { Icon } from './ui'
 
 const MERCHANT = { '7832': 'Magic Cinema', '5912': 'Dori-Darmon', '5812': 'Plov Center', '5814': 'Evos' }
 
 // Presenter-only controls, visually separate from the product UI.
 export default function DemoPanel() {
-  const { state, t, notify, refresh, openGuardian } = useApp()
+  const { state, t, lang, notify, refresh, openGuardian } = useApp()
   const [salary, setSalary] = useState(6375000)
   const [mccs, setMccs] = useState([])
   const [buy, setBuy] = useState({ source_id: '', mcc: '7832', amount: 150000, merchant: 'Magic Cinema' })
   const [busy, setBusy] = useState(false)
 
-  useEffect(() => { api.mcc().then(setMccs).catch(() => {}) }, [])
+  useEffect(() => { api.mcc().then(setMccs).catch(() => {}) }, [lang])
 
   const sources = [
     ...state.goals.filter((g) => g.status === 'active').map((g) => ({ id: g.id, label: `#${g.priority} ${g.name}` })),
@@ -49,7 +49,7 @@ export default function DemoPanel() {
         <h2 className="font-bold text-lg flex items-center gap-2">🎬 {t('demo')}</h2>
         <span className="text-xs text-amber-200/80">{t('demoHint')}</span>
       </div>
-      <p className="text-sm text-muted">{t('demoDate')}: {state.today}</p>
+      <p className="text-sm text-muted">{t('demoDate')}: {date(state.today, lang)}</p>
 
       <div>
         <label className="label" htmlFor="salary">💰 {t('salary')}</label>

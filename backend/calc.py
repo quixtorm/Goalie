@@ -12,6 +12,8 @@ from datetime import date
 from fractions import Fraction
 from math import ceil
 
+from texts import tr
+
 # ---- constants (tunable, nowhere else) ----
 MAX_SUBCARDS = 3
 MAX_TOTAL_PERCENT = 40
@@ -73,7 +75,7 @@ def income_basis(history: list[int], fallback_income: int | None = None) -> Inco
     recent = history[-INCOME_HISTORY_MONTHS:]
     if not recent:
         if not fallback_income or fallback_income <= 0:
-            raise CalcError("Укажите ваш ежемесячный доход")
+            raise CalcError(tr("err_income_needed"))
         return IncomeBasis(fallback_income, Fraction(fallback_income))
     return IncomeBasis(min(recent), Fraction(sum(recent), len(recent)))
 
@@ -92,7 +94,7 @@ def months_needed(remaining: int, percent: int, income: Fraction | int) -> int:
         return 0
     contrib = monthly_contribution(percent, income)
     if contrib <= 0:
-        raise CalcError("Доход должен быть больше нуля")
+        raise CalcError(tr("err_income_positive"))
     return ceil_frac(Fraction(remaining) / contrib)
 
 
@@ -132,10 +134,10 @@ class PercentSuggestion:
 
 def suggest_percent(remaining: int, target_months: int, used_percent: int, basis: IncomeBasis) -> PercentSuggestion:
     if target_months < 1 or target_months > MAX_MONTHS:
-        raise CalcError(f"Срок должен быть от 1 до {MAX_MONTHS} месяцев")
+        raise CalcError(tr("err_term", max=MAX_MONTHS))
     cap = MAX_TOTAL_PERCENT - used_percent
     if cap < MIN_PERCENT:
-        raise CalcError(f"Сумма процентов по целям не может быть больше {MAX_TOTAL_PERCENT}%")
+        raise CalcError(tr("err_total_pct", max=MAX_TOTAL_PERCENT))
     raw = ceil_frac(Fraction(remaining) / (target_months * basis.worst) * 100) if remaining > 0 else MIN_PERCENT
     pct = min(max(raw, MIN_PERCENT), cap)
     return PercentSuggestion(
@@ -150,13 +152,13 @@ def suggest_percent(remaining: int, target_months: int, used_percent: int, basis
 
 def validate_new_goal(existing_count: int, percent: int, used_percent: int, amount: int) -> None:
     if existing_count >= MAX_SUBCARDS:
-        raise CalcError(f"Можно иметь не больше {MAX_SUBCARDS} целей")
+        raise CalcError(tr("err_max_goals", max=MAX_SUBCARDS))
     if amount <= 0 or amount > MAX_AMOUNT:
-        raise CalcError("Сумма цели должна быть больше нуля")
+        raise CalcError(tr("err_goal_amount"))
     if percent < MIN_PERCENT:
-        raise CalcError(f"Процент должен быть не меньше {MIN_PERCENT}%")
+        raise CalcError(tr("err_min_pct", min=MIN_PERCENT))
     if used_percent + percent > MAX_TOTAL_PERCENT:
-        raise CalcError(f"Сумма процентов по целям не может быть больше {MAX_TOTAL_PERCENT}%")
+        raise CalcError(tr("err_total_pct", max=MAX_TOTAL_PERCENT))
 
 
 # ---- bonus ----
@@ -212,14 +214,14 @@ class CreditResult:
 
 def annuity_payment(amount: int, annual_rate: Fraction | int, months: int) -> Fraction:
     if months < 1 or months > MAX_MONTHS:
-        raise CalcError(f"Срок должен быть от 1 до {MAX_MONTHS} месяцев")
+        raise CalcError(tr("err_term", max=MAX_MONTHS))
     if amount <= 0 or amount > MAX_AMOUNT:
-        raise CalcError("Сумма кредита должна быть больше нуля")
+        raise CalcError(tr("err_credit_amount"))
     r = Fraction(annual_rate) / 1200
     if r == 0:
         return Fraction(amount, months)
     if r < 0:
-        raise CalcError("Ставка не может быть отрицательной")
+        raise CalcError(tr("err_rate_negative"))
     return Fraction(amount) * r / (1 - 1 / (1 + r) ** months)
 
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { api } from './api'
+import { api, setApiLang } from './api'
 import { AppCtx } from './ctx'
 import { makeT } from './i18n'
 import AgentSheet from './components/AgentSheet'
@@ -25,14 +25,18 @@ export default function App() {
   const [guardian, setGuardian] = useState(null)
   const [agentReq, setAgentReq] = useState(null)
   const [chat, setChat] = useState([])
-  const [lang, setLangState] = useState(() => (readPref('lang', 'ru') === 'uz' ? 'uz' : 'ru'))
+  const [lang, setLangState] = useState(() => {
+    const l = readPref('lang', 'ru') === 'uz' ? 'uz' : 'ru'
+    setApiLang(l) // before the first request
+    return l
+  })
   const [hidden, setHidden] = useState(false)
 
   const refresh = useCallback(() => {
     api.state().then((s) => { setState(s); setError(null) }).catch((e) => setError(e.message))
   }, [])
-  useEffect(() => { refresh() }, [refresh])
-  useEffect(() => { document.documentElement.lang = lang }, [lang])
+  // reload server texts (tips, names, transactions) whenever the language changes
+  useEffect(() => { setApiLang(lang); refresh() }, [lang, refresh])
 
   const ctx = useMemo(() => ({
     state, lang, t: makeT(lang), hidden, setHidden, refresh,
