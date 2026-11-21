@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { uzs } from '../format'
 import { useApp } from '../ctx'
 
@@ -120,7 +121,9 @@ export function Sheet({ open, onClose, children, full = false, label, z = 50 }) 
   const move = (e) => { if (start.current !== null) setDy(Math.max(0, e.clientY - start.current)) }
   const up = () => { if (dy > 110) onClose?.(); setDy(0); start.current = null }
 
-  return (
+  // Portal to <body>: a sheet opened inside a page must sit above the fixed tab bar. The page container's
+  // fade-in animation creates its own stacking context, which would otherwise trap the sheet below the bar.
+  return createPortal(
     <div className="fixed inset-0 flex items-end justify-center" style={{ zIndex: z }} role="dialog" aria-modal="true" aria-label={label}>
       <div className="absolute inset-0 bg-black/60 animate-fade-in" onClick={onClose} />
       <div className="relative w-full max-w-[420px] animate-sheet-up">
@@ -134,7 +137,8 @@ export function Sheet({ open, onClose, children, full = false, label, z = 50 }) 
           <div className="sheet-body min-h-0 flex-1 flex flex-col">{children}</div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

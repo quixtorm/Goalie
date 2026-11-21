@@ -119,3 +119,14 @@ In production this would also need (not built): real authentication with 2FA, en
 - UI and all server texts (tips, guardian, errors, purchase types, transactions, fallback agent) are Russian and
   Uzbek; the app sends `X-Lang` with every request. Names the user types (e.g. a new goal) stay as typed.
 - Goal priority uses в–І/в–ј buttons instead of drag-and-drop (works with touch, keyboard and screen readers).
+
+## Demo video (QA)
+
+Automated recording of the full scenario (Playwright, 390x844 phone view, fake cursor and captions). Start backend and frontend first, then:
+
+```powershell
+qa\.venv\Scripts\python.exe qa\record_demo.py
+```
+
+Outputs `qa/video/demo.mp4`, `demo.webm`, `frames/`, `report.md` and `qa/demo_video.zip`. Setup: see `qa/video/report.md`.
+

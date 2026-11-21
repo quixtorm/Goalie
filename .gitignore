@@ -7,3 +7,7 @@ __pycache__/
 node_modules/
 dist/
 .vite/
+
+# QA recordings (large binaries; re-create with qa/record_demo.py)
+qa/video/
+qa/demo_video.zip
