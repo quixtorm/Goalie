@@ -69,6 +69,10 @@ def test_full_demo_in_uzbek_has_no_russian(c):
     assert "Oila" in tr["title"]
     no_cyrillic(c.post(f"/agent/proposals/{tr['id']}/confirm", headers=UZ))
     no_cyrillic(c.post("/agent/chat", json={"message": "Nega oila o'tkazmalari rejaga kirmaydi?", "lang": "uz"}))
+    adv = no_cyrillic(c.post("/agent/chat", json={"message": "Kompyuter uchun 15 mln arzon kredit tavsiya qil",
+                                                   "lang": "uz"}))
+    assert adv["credit_advice"]["best"]["name"] == "Iste'mol Standart"
+    no_cyrillic(c.post("/credits/advise", json={"amount": 15_000_000}, headers=UZ))
     no_cyrillic(c.get("/state", headers=UZ))
 
 

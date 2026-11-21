@@ -16,6 +16,8 @@ export default function Home() {
     { icon: 'shield', label: t('qaObl'), onClick: () => go('payments') },
     { icon: 'pay', label: t('qaPay'), onClick: () => go('payments') },
     { icon: 'calc', label: t('qaCredit'), onClick: () => openAgent({ send: t('creditPrompt') }) },
+    // pre-fills (does not send) the advice prompt, so the user can edit the amount first
+    { icon: 'star', label: t('qaCreditPick'), onClick: () => openAgent({ draft: t('creditPickPrompt') }) },
   ]
 
   return (
@@ -43,13 +45,13 @@ export default function Home() {
         {/* quick actions */}
         <section>
           <h2 className="h-section">{t('quick')}</h2>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-5 gap-1">
             {actions.map((a) => (
-              <button key={a.label} onClick={a.onClick} className="press flex flex-col items-center gap-2 text-center">
-                <span className="w-16 h-16 rounded-full bg-card2 border border-line grid place-items-center text-ink hover:bg-white/10">
-                  <Icon name={a.icon} size={26} />
+              <button key={a.label} onClick={a.onClick} className="press flex flex-col items-center gap-2 text-center min-w-0">
+                <span className="w-14 h-14 rounded-full bg-card2 border border-line grid place-items-center text-ink hover:bg-white/10">
+                  <Icon name={a.icon} size={24} />
                 </span>
-                <span className="text-[13px] leading-tight text-ink/90">{a.label}</span>
+                <span className="text-[12px] leading-tight text-ink/90 break-words">{a.label}</span>
               </button>
             ))}
           </div>

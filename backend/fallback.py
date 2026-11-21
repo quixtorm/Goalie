@@ -9,7 +9,7 @@ from fractions import Fraction
 
 import calc
 from calc import CalcError
-from modules import budget, goals, obligations, proposals
+from modules import budget, credits, goals, obligations, proposals
 from state import State
 from texts import tr
 
@@ -81,10 +81,32 @@ def intent(text: str) -> str:
     return "help"
 
 
+ADVICE_RE = re.compile(r"посовет|совет|подбер|подобр|лучш|низк|выгодн|дешев|tavsiya|maslahat|eng yaxshi|arzon|past foiz|"
+                       r"tanla|qaysi kredit", re.I)
+CREDIT_RE = re.compile(r"кредит|займ|заём|рассроч|kredit|qarz|nasiya", re.I)
+
+
+def is_credit_advice(message: str, p: dict) -> bool:
+    """'Recommend me the best/cheapest credit' (no rate given) -> ranking; with a rate -> plain calculation."""
+    return bool(CREDIT_RE.search(message) and ADVICE_RE.search(message) and "rate" not in p)
+
+
+def _linked_goal(s: State, message: str) -> str | None:
+    t = message.lower().replace("ё", "е")
+    for g in budget.active_goals(s):
+        for n in {g.name, *(g.names or {}).values()}:
+            stem = n.lower().replace("ё", "е")[:5]
+            if len(stem) >= 4 and stem in t:
+                return g.id
+    return None
+
+
 def reply(s: State, message: str) -> dict:
     kind = intent(message)
     p = parse(message)
     try:
+        if is_credit_advice(message, p):
+            return _advise(s, p, message)
         if kind == "goal":
             return _goal(s, p)
         if kind == "credit":
@@ -118,6 +140,37 @@ def _goal(s: State, p: dict) -> dict:
               expiry_date=sg["expiry"], lock=tr("lock"))
     prop = proposals.propose_goal(s, name, p["amount"], pct)
     return {"reply": head + body, "proposals": [proposals.view(prop)], "data": sg}
+
+
+def _advise(s: State, p: dict, message: str) -> dict:
+    """Same structure as the LLM answer, filled only from credits.advise (code ranking of the DEMO catalog)."""
+    if "amount" not in p:
+        return {"reply": tr("a_adv_ask"), "proposals": []}
+    r = credits.advise(s, p["amount"], p.get("months"), _linked_goal(s, message))
+    thr = r["criteria"]["risk_threshold_percent"]
+    if not r["options"]:
+        return {"reply": tr("a_adv_none"), "proposals": [], "credit_advice": r}
+    if r["best"]:
+        b = r["best"]
+        txt = tr("a_adv_best", name=b["name"], n_months=b["months"], pay_sum=b["monthly_payment"],
+                 share=b["income_share_percent"], over_sum=b["total_overpayment"], thr=thr)
+        alt = r["lowest_payment"]
+        if alt and alt["key"] != b["key"]:
+            txt += tr("a_adv_alt", name=alt["name"], n_months=alt["months"], pay_sum=alt["monthly_payment"],
+                      over_sum=alt["total_overpayment"])
+        ref = b
+    else:
+        ref = r["lowest_risk"]
+        txt = tr("a_adv_nosafe", thr=thr, name=ref["name"], n_months=ref["months"], pay_sum=ref["monthly_payment"],
+                 share=ref["income_share_percent"])
+    for d in ref["goal_delays"]:
+        if d["delay_months"]:
+            txt += tr("a_adv_delay", name=d["name"], delay_months=d["delay_months"])
+    w = r["wait_option"]
+    if w:
+        txt += tr("a_adv_wait", wait_months=w["months_worst"], over_sum=w["overpayment_avoided"])
+    txt += tr("a_adv_disclaimer")
+    return {"reply": txt, "proposals": [], "credit_advice": r}
 
 
 def _credit(s: State, p: dict) -> dict:

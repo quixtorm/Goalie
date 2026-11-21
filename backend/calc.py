@@ -199,6 +199,107 @@ def suggest_percent(remaining: int, target_months: int, used_percent: int, basis
     )
 
 
+# ---- credit advisor (ranking of the DEMO catalog; the LLM only explains the result) ----
+CREDIT_TERMS = (6, 12, 24, 36, 48)
+CREDIT_RISK_THRESHOLD = DTI_THRESHOLD  # payment / worst monthly SALARY
+
+
+def _credit_ineligibility(p: dict, amount: int, months: int, salary_months: int) -> str | None:
+    if amount < p["min_amount"] or amount > p["max_amount"]:
+        return "amount"
+    if salary_months < p["min_salary_history_months"]:
+        return "salary_history"
+    if months < p["min_months"] or months > p["max_months"]:
+        return "term"
+    return None
+
+
+def rank_credits(amount: int, term_months: int | None, products: list[dict], basis: IncomeBasis,
+                 monthly_obligations: int, goal_percents: list[int], goals: list[dict], salary_months: int,
+                 used_percent: int, linked_goal: dict | None = None) -> dict:
+    """Deterministic ranking. Safe = payment <= 40% of the worst monthly salary AND no cash gap.
+    best = lowest total cost (amount + interest + origination fee) among safe options."""
+    if amount <= 0 or amount > MAX_AMOUNT:
+        raise CalcError(tr("err_credit_amount"))
+    if term_months is not None and not (1 <= term_months <= MAX_MONTHS):
+        raise CalcError(tr("err_term", max=MAX_MONTHS))
+    terms = [term_months] if term_months else list(CREDIT_TERMS)
+    options, ineligible = [], []
+    for p in products:
+        reasons = [_credit_ineligibility(p, amount, m, salary_months) for m in terms]
+        ok = [m for m, r in zip(terms, reasons) if r is None]
+        if not ok:
+            ineligible.append({"product_id": p["id"], "name": p["name"], "reason": reasons[0]})
+            continue
+        for m in ok:
+            r = calc_credit(amount, Fraction(str(p["annual_rate"])), m, basis, monthly_obligations, goal_percents)
+            fee = round_money(Fraction(amount) * Fraction(str(p["origination_fee_percent"])) / 100)
+            share = Fraction(r.payment) / basis.worst
+            risk = share > CREDIT_RISK_THRESHOLD
+            delays = [{"goal_id": i.goal_id, "name": i.name, "months_before": i.months_before,
+                       "months_after": i.months_after, "delay_months": i.delay_months}
+                      for i in credit_impact_on_goals(r.payment, goals, basis)]
+            options.append({
+                "key": f"{p['id']}:{m}", "product_id": p["id"], "name": p["name"], "type": p["type"],
+                "note": p.get("note", ""), "annual_rate": p["annual_rate"],
+                "fee_percent": p["origination_fee_percent"], "origination_fee": fee, "months": m,
+                "monthly_payment": r.payment, "interest": r.overpayment, "total_overpayment": r.overpayment + fee,
+                "total_cost": amount + r.overpayment + fee, "income_share_percent": round_money(share * 100),
+                "risk": risk, "cash_gap": r.cashflow_risk, "safe": not risk and not r.cashflow_risk,
+                "free_money": r.free_money, "early_repayment_allowed": p["early_repayment_allowed"],
+                "goal_delays": delays, "tags": [],
+            })
+
+    safe = [o for o in options if o["safe"]]
+    by_cost = lambda o: (o["total_cost"], o["months"])  # noqa: E731
+    best = min(safe, key=by_cost) if safe else None
+    pool = safe or options
+    lowest_payment = min(pool, key=lambda o: (o["monthly_payment"], o["total_cost"])) if pool else None
+    fastest = min(pool, key=lambda o: (o["months"], o["total_cost"])) if pool else None
+    lowest_risk = None if safe or not options else min(options, key=lambda o: (o["income_share_percent"], o["total_cost"]))
+
+    top: list[dict] = []
+    for o in [best, lowest_payment, fastest, *sorted(safe, key=by_cost)] if safe else \
+            [lowest_risk, *sorted(options, key=lambda o: (o["income_share_percent"], o["total_cost"]))]:
+        if o and o["key"] not in {x["key"] for x in top}:
+            top.append(o)
+        if len(top) == 3:
+            break
+    for o, tag in ((best, "best_cost"), (lowest_payment, "lowest_payment"), (fastest, "fastest"),
+                   (lowest_risk, "lowest_risk")):
+        if o and o in top and tag not in o["tags"]:
+            o["tags"].append(tag)
+
+    # wait-and-save comparison: months to collect the money yourself (salary-only plan), with no overpayment
+    if linked_goal:
+        rem = max(0, linked_goal["amount"] - linked_goal["saved"])
+        wait = {"linked_goal": linked_goal["name"], "percent": linked_goal["percent"],
+                "months_worst": months_needed(rem, linked_goal["percent"], basis.worst)}
+    else:
+        try:
+            ap = auto_plan(amount, None, used_percent, basis)
+            wait = {"linked_goal": None, "percent": ap.percent, "months_worst": ap.months_worst}
+        except CalcError:
+            wait = None  # no free percent left for a new saving plan
+    ref = best or lowest_risk
+    if wait is not None and ref:
+        wait["overpayment_avoided"] = ref["total_overpayment"]
+
+    warnings = []
+    if not options:
+        warnings.append("no_eligible")
+    elif not safe:
+        warnings.append("no_safe")
+    if any(o["risk"] for o in top):
+        warnings.append("high_share")
+    return {"amount": amount, "term_months": term_months, "demo_data": True,
+            "criteria": {"risk_threshold_percent": round_money(CREDIT_RISK_THRESHOLD * 100),
+                         "ranked_by": "total_cost", "basis": "worst monthly SALARY"},
+            "options": top, "best": best, "lowest_payment": lowest_payment, "fastest": fastest,
+            "lowest_risk": lowest_risk, "evaluated": len(options), "ineligible": ineligible,
+            "wait_option": wait, "warnings": warnings}
+
+
 AUTO_TARGET_MONTHS = 24  # when the user does not pick a term, the agent aims to finish in about 2 years
 
 

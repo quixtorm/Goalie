@@ -145,6 +145,34 @@ T: dict[str, tuple[str, str]] = {
     "p_newobl_text": ("Добавить обязательный платёж {amount_sum} до {due_date}.",
                       "{due_date} gacha {amount_sum} majburiy to'lov qo'shish."),
     "p_add_obl": ("Добавить платёж", "To'lov qo'shish"),
+    "err_credit_not_eligible": ("Этот продукт не подходит под сумму или срок", "Bu mahsulot summa yoki muddatga mos emas"),
+    "credit_applied": ("Заявка (демо) на «{name}» отправлена: {amount_sum} на {n_months}. Деньги не перечислялись.",
+                       "«{name}» uchun ariza (demo) yuborildi: {amount_sum}, {n_months}. Pul o'tkazilmadi."),
+    "a_adv_ask": ("На какую сумму нужен кредит? Если он для одной из ваших целей — скажите, для какой.",
+                  "Qancha summaga kredit kerak? Agar u maqsadlaringizdan biri uchun bo'lsa — qaysi biri uchun ekanini ayting."),
+    "a_adv_best": ("Лучший по стоимости среди демо-предложений банка: «{name}» на {n_months} — платёж {pay_sum} в месяц "
+                   "({share}% зарплаты), переплата {over_sum}.\nПочему: самая низкая полная стоимость среди безопасных "
+                   "вариантов (платёж не больше {thr}% самой низкой зарплаты и хватает на жизнь).",
+                   "Bankning demo takliflari ichida narx bo'yicha eng yaxshisi: «{name}», {n_months} — oyiga {pay_sum} "
+                   "(maoshning {share}%), ortiqcha to'lov {over_sum}.\nNega: xavfsiz variantlar ichida umumiy narxi eng "
+                   "past (to'lov eng past maoshning {thr}% idan oshmaydi va yashashga yetadi)."),
+    "a_adv_alt": ("\n• Если важнее маленький платёж: «{name}» на {n_months} — {pay_sum} в месяц, но переплата {over_sum}.",
+                  "\n• Kichik to'lov muhimroq bo'lsa: «{name}», {n_months} — oyiga {pay_sum}, lekin ortiqcha to'lov {over_sum}."),
+    "a_adv_delay": ("\n• «{name}» сдвинется на {delay_months}.", "\n• «{name}» {delay_months}ga suriladi."),
+    "a_adv_wait": ("\n• Накопить самому: {wait_months} без переплаты (сэкономите {over_sum}).",
+                   "\n• O'zingiz yig'sangiz: {wait_months}, ortiqcha to'lovsiz ({over_sum} tejaysiz)."),
+    "a_adv_nosafe": ("Безопасного варианта нет: при любом сроке платёж больше {thr}% зарплаты или не хватит на жизнь. "
+                     "Наименее рискованный — «{name}» на {n_months}: {pay_sum} в месяц ({share}% зарплаты). "
+                     "Лучше уменьшить сумму или сначала накопить.",
+                     "Xavfsiz variant yo'q: har qanday muddatda to'lov maoshning {thr}% idan ko'p yoki yashashga "
+                     "yetmaydi. Eng kam xavfli — «{name}», {n_months}: oyiga {pay_sum} (maoshning {share}%). "
+                     "Summani kamaytirish yoki avval yig'ish yaxshiroq."),
+    "a_adv_none": ("Для этой суммы и срока в демо-каталоге банка нет подходящих продуктов.",
+                   "Bu summa va muddat uchun bankning demo katalogida mos mahsulot yo'q."),
+    "a_adv_disclaimer": ("\n\nЭто лучший вариант по стоимости среди демо-предложений банка по этим критериям, а не "
+                         "универсальный совет. Решать вам: заявка оформляется только после вашего подтверждения.",
+                         "\n\nBu bankning demo takliflari ichida shu mezonlar bo'yicha narxi eng yaxshi variant, "
+                         "umumiy maslahat emas. Qaror sizniki: ariza faqat siz tasdiqlaganingizdan keyin yuboriladi."),
     "plan_why_term": ("Чтобы успеть за {term_months} даже в самый слабый месяц, хватит {pct}% зарплаты.",
                       "Eng past maosh oyida ham {term_months}da ulgurish uchun maoshning {pct}% i yetadi."),
     "plan_why_term_capped": ("За {term_months} не успеть: на все цели можно не больше {cap}% зарплаты. Я взял "

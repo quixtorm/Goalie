@@ -28,7 +28,7 @@ npm run dev
 ```
 Open http://127.0.0.1:5173, preferably in phone view (F12 в†’ device toolbar).
 
-Tests (77 tests, ~8 s, no API key needed; `test_i18n.py` runs the whole demo in Uzbek and fails on any Russian text):
+Tests (97 tests, ~8 s, no API key needed; `test_i18n.py` runs the whole demo in Uzbek and fails on any Russian text):
 ```powershell
 cd backend
 .venv\Scripts\python.exe -m pytest -q
@@ -49,6 +49,14 @@ The AI agent opens from the header on every screen: the search field В«РџР�
 | 5 | Home в†’ quick action В«Р Р°СЃС‡С‘С‚ РєСЂРµРґРёС‚Р°В» (or the chip) | 1 930 120 so'm/month, overpayment 3 161 437, 30% of income, вљ  payment is bigger than free money (1 835 000), В«РњР°С€РёРЅР°В» 35 в†’ 51 months. No bank recommendations. |
 | 6 | Tab В«РџР»Р°С‚РµР¶РёВ» в†’ В«пј‹ Р”РѕР±Р°РІРёС‚СЊ РїР»Р°С‚С‘Р¶В»: В«Р”РѕР»Рі Р±СЂР°С‚СѓВ», 1 500 000, 5 РґРµРєР°Р±СЂСЏ 2026 | рџ”” / Home В«AI-СЃРѕРІРµС‚РЅРёРєВ»: В«РќРµ С…РІР°С‚Р°РµС‚ 1 500 000В» в†’ В«РџРµСЂРµРІРµСЃС‚Рё 1 500 000 so'mВ» в†’ status В«вњ“ РҐРІР°С‚Р°РµС‚В». |
 | 7 | В«Р•С‰С‘В» в†’ В«РЎРёРјСѓР»РёСЂРѕРІР°С‚СЊ РїРµСЂРµРІРѕРґ РѕС‚ Р±Р»РёР·РєРёС…В»: 2 000 000, В«РЎРµРјСЊСЏВ» | Main card +2 000 000, chip В«РџРµСЂРµРІРѕРґВ». В«РњР°С€РёРЅР°В»: percent, deadline and months **unchanged** (plan = salary only). рџ”” В«РџСЂРёС€Р»Рѕ 2 000 000 so'm РѕС‚: РЎРµРјСЊСЏвЂ¦ РџСЂРµРґР»Р°РіР°СЋ 22% вЂ” 440 000 so'mВ» в†’ В«РћС‚Р»РѕР¶РёС‚СЊ 440 000 so'mВ» в†’ saved +440 000, deadline still the same. Ask the agent В«РџРѕС‡РµРјСѓ РїРµСЂРµРІРѕРґС‹ РЅРµ СѓС‡РёС‚С‹РІР°СЋС‚СЃСЏ?В» в†’ it answers from `list_income_by_type`. |
+
+| 8 | Home → «Кредит подобрать» (or chat): «Посоветуй лучший кредит с низким процентом на компьютер 15 млн» | 3 offer cards (демо-данные): **★ Лучший по стоимости** «Потребительский Стандарт» 12 мес — 1 432 952/мес, переплата 2 345 425, 22% зарплаты, chips «Машина +10 мес», «Телефон +2 мес»; «Меньше платёж» «Выгодный (долгий срок)» 48 мес — 472 591/мес but 7 984 376 overpayment; row «Накопить самому: 30 месяцев, без переплаты». Nothing is applied until «Оформить заявку (демо)» → confirm. |
+
+**Credit advisor.** Ranking is code (`calc.rank_credits`) over a fictional demo catalog (`backend/loan_products.py`):
+eligibility (amount, term, salary history) → for each product/term: payment, interest + origination fee, share of the
+worst monthly salary, risk (> 40%), cash gap, goal delays → best = lowest total cost among safe options, plus
+lowest-payment and fastest alternatives and a "save it yourself" comparison. The agent may only explain what the tool
+returns; applying is a mock (`POST /credits/apply`) that needs explicit confirmation and moves no money.
 
 **Income types.** Every inflow is SALARY, TRANSFER (family, friends) or OTHER. Only SALARY feeds the plan
 (worst/avg monthly salary over the last 6 salaries; worst annual = worst month Г— 12). Transfers credit the main card

@@ -75,6 +75,19 @@ def test_income_by_type_tool_formats_money_and_keeps_counts(s, monkeypatch):
     assert '"count": 2' in tr and "3 500 000 so'm" in tr and "81 600 000 so'm" in tr and '"planning_basis": "SALARY"' in tr
 
 
+def test_advise_credit_tool_returns_code_ranking_as_cards(s, monkeypatch):
+    fake = FakeClient([
+        NS(stop_reason="tool_use", content=[tool("t1", "advise_credit", {"amount": 15_000_000})]),
+        NS(stop_reason="end_turn", content=[text("Лучший по стоимости — см. карточки.")]),
+    ])
+    use(monkeypatch, fake)
+    r = agent.chat(s, "Посоветуй лучший кредит с низким процентом на 15 млн", [])
+    assert r["source"] == "llm" and r["credit_advice"]["best"]["product_id"] == "demo_install"
+    tr = fake.calls[1]["messages"][-1]["content"][0]["content"]
+    assert '"annual_rate": 0' in tr and "1 200 000 so'm" in tr  # rates plain, money pre-formatted
+    assert s.credit_applications == []  # the model can never apply
+
+
 def test_bad_tool_input_returns_error_not_crash(s, monkeypatch):
     fake = FakeClient([
         NS(stop_reason="tool_use", content=[tool("t1", "calc_credit", {"amount": -5, "annual_rate": 28, "months": 12})]),

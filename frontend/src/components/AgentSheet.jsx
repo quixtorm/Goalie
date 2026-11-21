@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../api'
 import { useApp } from '../ctx'
+import CreditAdvice from './CreditAdvice'
 import ProposalCard from './ProposalCard'
 import { Icon, Sheet } from './ui'
 
@@ -41,7 +42,7 @@ export default function AgentSheet({ req, onClose, chat, setChat }) {
     setBusy(true)
     try {
       const r = await api.chat(msg, history, lang)
-      setChat((c) => [...c, { role: 'assistant', text: r.reply, proposals: r.proposals || [], source: r.source }])
+      setChat((c) => [...c, { role: 'assistant', text: r.reply, proposals: r.proposals || [], advice: r.credit_advice || null, source: r.source }])
       refresh()
     } catch (e) {
       setChat((c) => [...c, { role: 'assistant', text: `⚠ ${e.message}`, proposals: [] }])
@@ -90,6 +91,7 @@ export default function AgentSheet({ req, onClose, chat, setChat }) {
                 <div className="max-w-[94%] rounded-[20px] rounded-bl-md bg-card2 border border-line px-4 py-3 whitespace-pre-line text-ink">
                   {m.text}
                 </div>
+                {m.advice && <CreditAdvice data={m.advice} />}
                 {(m.proposals || []).map((p) => (
                   <ProposalCard key={`${p.id}-${latest[p.id]?.status || p.status}`} p={latest[p.id] || p} onDone={loadInbox} />
                 ))}

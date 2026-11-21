@@ -86,6 +86,7 @@ class State:
     proposals: dict[str, Proposal] = field(default_factory=dict)
     transactions: list[dict[str, Any]] = field(default_factory=list)
     last_salary: dict[str, Any] | None = None
+    credit_applications: list[dict[str, Any]] = field(default_factory=list)  # mock, demo only
 
     @property
     def today(self) -> date:

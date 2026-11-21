@@ -89,6 +89,18 @@ const ru = {
   transferDemo: 'Симулировать перевод от близких', transferFrom: 'От кого', transferDefault: 'Семья', transferBtn: 'Зачислить перевод',
   transferDone: (a) => `Перевод ${a} зачислен на основную карту. План и сроки не изменились.`,
   salaryDemo: 'Симулировать зарплату',
+  qaCreditPick: 'Кредит подобрать', creditPickPrompt: 'Посоветуй лучший кредит с низким процентом на компьютер 15 млн',
+  offersTitle: 'Предложения банка', demoData: 'демо-данные',
+  tag_best_cost: 'Лучший по стоимости', tag_lowest_payment: 'Меньше платёж', tag_fastest: 'Быстрее всего', tag_lowest_risk: 'Меньше риск',
+  perYear: (r) => `${r}% годовых`, payMonth: 'Платёж в месяц', overpay: 'Переплата', shareSalary: (p) => `${p}% зарплаты`,
+  goalDelay: (n, m) => `${n} +${m} мес`, hideDetails: 'Скрыть',
+  term: 'Срок', fee: 'Комиссия', interest: 'Проценты', totalCost: 'Всего вернуть', earlyRepay: 'Досрочное погашение',
+  yes: 'можно', no: 'нельзя', cashGapWarn: 'Платёж больше свободных денег в месяц', riskWarn: 'Платёж больше 40% зарплаты',
+  applyDemo: 'Оформить заявку (демо)', applyTitle: (n) => `Заявка на «${n}» (демо)`,
+  applyText: (a, m, p, o) => `Сумма ${a} на ${m}, платёж ${p} в месяц, переплата ${o}.\nЭто демо: заявка только записывается, деньги не перечисляются. Решение за вами.`,
+  applyOk: 'Подтверждаю, отправить', applied: 'Заявка (демо) отправлена',
+  waitRow: (m) => `Накопить самому: ${m}, без переплаты`, waitSave: (o) => `сэкономите ${o}`,
+  noSafeWarn: 'Безопасного варианта нет — лучше уменьшить сумму или накопить.',
 }
 
 const uz = {
@@ -181,6 +193,18 @@ const uz = {
   transferDemo: "Yaqinlardan o'tkazmani simulyatsiya qilish", transferFrom: 'Kimdan', transferDefault: 'Oila', transferBtn: "O'tkazmani qabul qilish",
   transferDone: (a) => `${a} o'tkazma asosiy kartaga tushdi. Reja va muddatlar o'zgarmadi.`,
   salaryDemo: 'Maoshni simulyatsiya qilish',
+  qaCreditPick: 'Kredit tanlash', creditPickPrompt: 'Kompyuter uchun 15 mln arzon kredit tavsiya qil',
+  offersTitle: 'Bank takliflari', demoData: "demo-ma'lumot",
+  tag_best_cost: "Narxi bo'yicha eng yaxshi", tag_lowest_payment: "To'lov kichikroq", tag_fastest: 'Eng tez', tag_lowest_risk: 'Xavf kamroq',
+  perYear: (r) => `yillik ${r}%`, payMonth: "Oylik to'lov", overpay: "Ortiqcha to'lov", shareSalary: (p) => `maoshning ${p}%`,
+  goalDelay: (n, m) => `${n} +${m} oy`, hideDetails: 'Yashirish',
+  term: 'Muddat', fee: 'Komissiya', interest: 'Foizlar', totalCost: 'Jami qaytarish', earlyRepay: "Muddatidan oldin to'lash",
+  yes: 'mumkin', no: 'mumkin emas', cashGapWarn: "To'lov oylik bo'sh puldan katta", riskWarn: "To'lov maoshning 40% idan ko'p",
+  applyDemo: 'Ariza berish (demo)', applyTitle: (n) => `«${n}» uchun ariza (demo)`,
+  applyText: (a, m, p, o) => `Summa ${a}, ${m}, oyiga ${p}, ortiqcha to'lov ${o}.\nBu demo: ariza faqat yoziladi, pul o'tkazilmaydi. Qaror sizniki.`,
+  applyOk: 'Tasdiqlayman, yuborish', applied: 'Ariza (demo) yuborildi',
+  waitRow: (m) => `O'zingiz yig'sangiz: ${m}, ortiqcha to'lovsiz`, waitSave: (o) => `${o} tejaysiz`,
+  noSafeWarn: "Xavfsiz variant yo'q — summani kamaytirish yoki yig'ish yaxshiroq.",
 }
 
 export const DICT = { ru, uz }

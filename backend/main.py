@@ -23,7 +23,7 @@ import fallback  # noqa: E402
 import mcc as mcc_mod  # noqa: E402
 from calc import CalcError  # noqa: E402
 from mock_data import seed  # noqa: E402
-from modules import budget, goals, guardian, obligations, proposals  # noqa: E402
+from modules import budget, credits, goals, guardian, obligations, proposals  # noqa: E402
 from state import Store  # noqa: E402
 from texts import render, set_lang, tr  # noqa: E402
 
@@ -147,6 +147,19 @@ class ChatIn(Strict):
     lang: Literal["ru", "uz"] = "ru"
 
 
+class AdviseIn(Strict):
+    amount: int = Money
+    term_months: int | None = Field(default=None, ge=1, le=calc.MAX_MONTHS)
+    goal_id: str | None = Field(default=None, max_length=40)
+
+
+class CreditApplyIn(Strict):
+    product_id: str = Field(min_length=1, max_length=40)
+    amount: int = Money
+    months: int = Field(ge=1, le=calc.MAX_MONTHS)
+    confirm: bool = False
+
+
 class ReorderIn(Strict):
     ids: list[str] = Field(min_length=1, max_length=calc.MAX_SUBCARDS)
 
@@ -186,6 +199,7 @@ def state_view() -> dict:
                           "daily_baseline": calc.DAILY_SPEND_BASELINE},
         "proposals_pending": [proposals.view(p) for p in sorted(pend, key=lambda p: p.created_at, reverse=True)],
         "last_salary": s.last_salary,
+        "credit_applications": credits.applications_view(s),
         "income": {**fallback.income_view(s), "worst": b.worst, "avg": calc.round_money(b.avg),
                    "salary_history": calc.salary_amounts(s.incomes)[-calc.ANNUAL_WINDOW_MONTHS:],
                    "next_income_date": s.next_income_date.isoformat()},
@@ -223,6 +237,20 @@ def calc_suggest(amount: int, months: int):
         raise CalcError(tr("err_check_amount_term"))
     with STORE.lock:
         return goals.suggest(STORE.state, amount, months)
+
+
+@app.post("/credits/advise")
+def credits_advise(body: AdviseIn):
+    """Ranked DEMO credit offers (code ranking; the agent only explains). Read-only."""
+    with STORE.lock:
+        return credits.advise(STORE.state, body.amount, body.term_months, body.goal_id)
+
+
+@app.post("/credits/apply")
+def credits_apply(body: CreditApplyIn):
+    """MOCK application: requires confirm=true, records it in state, moves no money."""
+    with STORE.lock:
+        return credits.apply(STORE.state, body.product_id, body.amount, body.months, body.confirm)
 
 
 @app.post("/subcards/plan")

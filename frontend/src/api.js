@@ -41,6 +41,8 @@ export const api = {
   spend: (b) => request('POST', '/spend', b),
   resolve: (id, option, confirm = false) =>
     request('POST', `/spend/${encodeURIComponent(id)}/resolve`, { option, confirm }),
+  adviseCredit: (amount, term_months, goal_id) => request('POST', '/credits/advise', { amount, ...(term_months ? { term_months } : {}), ...(goal_id ? { goal_id } : {}) }),
+  applyCredit: (product_id, amount, months) => request('POST', '/credits/apply', { product_id, amount, months, confirm: true }),
   reorder: (ids) => request('POST', '/subcards/reorder', { ids }),
   chat: (message, history, lang = 'ru') => request('POST', '/agent/chat', { message, history, lang }),
   inbox: () => request('GET', '/agent/inbox'),

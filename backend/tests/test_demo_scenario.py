@@ -111,6 +111,25 @@ def test_step6_new_debt_topup(c):
     assert debt["reserved"] == 1_500_000 and debt["status"] == "ok"
 
 
+def test_step8_credit_advisor_nothing_applied_without_confirmation(c):
+    before = c.get("/state").json()
+    r = c.post("/agent/chat", json={"message": "Посоветуй лучший кредит с низким процентом на компьютер 15 млн"}).json()
+    adv = r["credit_advice"]
+    assert adv and adv["demo_data"] and len(adv["options"]) == 3
+    best = adv["best"]
+    assert best["product_id"] == "demo_cons_std" and best["months"] == 12 and "best_cost" in best["tags"]
+    assert best["total_overpayment"] == 2_345_425 and best["monthly_payment"] == 1_432_952
+    assert adv["lowest_payment"]["product_id"] == "demo_cons_long" and adv["lowest_payment"]["months"] == 48
+    assert any(d["name"] == "Машина" and d["delay_months"] > 0 for d in best["goal_delays"])
+    assert adv["wait_option"]["months_worst"] == 30 and adv["wait_option"]["overpayment_avoided"] == 2_345_425
+    assert "Лучший по стоимости" in r["reply"] and "решать вам" in r["reply"].lower()
+    after = c.get("/state").json()
+    assert after["credit_applications"] == [] and after["main"] == before["main"]  # nothing applied
+    # no amount -> one question, nothing else
+    q = c.post("/agent/chat", json={"message": "Подбери кредит с низким процентом"}).json()
+    assert "На какую сумму" in q["reply"] and not q.get("credit_advice")
+
+
 def test_step7_family_transfer_does_not_change_the_plan(c):
     before = car(c)
     r = c.post("/demo/transfer-in", json={"amount": 2_000_000, "source": "Семья"})
