@@ -3,7 +3,7 @@ import DemoPanel from '../components/DemoPanel'
 import { Icon } from '../components/ui'
 
 export default function More() {
-  const { state, t, lang, setLang, hidden, setHidden } = useApp()
+  const { state, t, lang, setLang, hidden, setHidden, go } = useApp()
   return (
     <div className="space-y-5 pt-4">
       <section className="card flex items-center gap-4">
@@ -41,6 +41,16 @@ export default function More() {
         </div>
       </section>
 
+      {state.demo_mode && (
+        <button className="press w-full card !p-4 flex items-center gap-3 text-left hover:bg-white/5" onClick={() => go('cards')}>
+          <span className="w-11 h-11 rounded-[14px] bg-card2 grid place-items-center"><Icon name="pay" size={22} /></span>
+          <span className="flex-1">
+            <span className="block font-semibold">{t('gallery')}</span>
+            <span className="text-muted text-sm">{t('galleryHint')}</span>
+          </span>
+          <Icon name="chevronR" size={20} className="text-muted" />
+        </button>
+      )}
       {state.demo_mode && <DemoPanel />}
     </div>
   )

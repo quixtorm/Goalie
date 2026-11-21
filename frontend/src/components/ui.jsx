@@ -26,6 +26,12 @@ const P = {
   globe: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm-9 9h18M12 3c2.5 2.5 3.8 5.6 3.8 9S14.5 18.5 12 21c-2.5-2.5-3.8-5.6-3.8-9S9.5 5.5 12 3Z',
   lock: 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5V11Z',
   film: 'M4 5h16v14H4V5Zm4 0v14M16 5v14M4 9h4M4 15h4M16 9h4M16 15h4',
+  snow: 'M12 2v20M3.3 7l17.4 10M3.3 17 20.7 7M9 3.5l3 2 3-2M9 20.5l3-2 3 2M3.6 10.5l3.2-1.4-.4-3.5M20.4 13.5l-3.2 1.4.4 3.5M3.6 13.5l3.2 1.4-.4 3.5M20.4 10.5l-3.2-1.4.4-3.5',
+  waves: 'M8.5 8.5a5 5 0 0 1 0 7M12 6a8.5 8.5 0 0 1 0 12M15.5 3.5a12 12 0 0 1 0 17',
+  info: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 8v5m0-8h.01',
+  star: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9L12 3Z',
+  chart: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
+  sort: 'M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4',
 }
 
 export function Icon({ name, size = 22, className = '', fill = false, strokeWidth = 1.8 }) {
@@ -124,7 +130,8 @@ export function Sheet({ open, onClose, children, full = false, label, z = 50 }) 
             onPointerUp={up} onPointerCancel={up}>
             <div className="mx-auto h-1.5 w-11 rounded-full bg-white/20" />
           </div>
-          {children}
+          {/* min-h-0 lets tall content scroll inside the sheet instead of pushing buttons off-screen */}
+          <div className="sheet-body min-h-0 flex-1 flex flex-col">{children}</div>
         </div>
       </div>
     </div>
@@ -135,10 +142,13 @@ export function ConfirmSheet({ open, title, text, confirmLabel, onConfirm, onClo
   const { t } = useApp()
   return (
     <Sheet open={open} onClose={onClose} label={title} z={70}>
-      <div className="px-6 pb-8 overflow-y-auto">
-        <h2 className="text-xl font-bold mb-2">{title}</h2>
-        <p className="text-muted whitespace-pre-line">{text}</p>
-        <div className="mt-6 grid gap-2">
+      <div className="flex flex-col min-h-0 flex-1">
+        {/* long text scrolls; the buttons stay pinned and always visible */}
+        <div className="px-6 min-h-0 overflow-y-auto overscroll-contain">
+          <h2 className="text-xl font-bold mb-2">{title}</h2>
+          <p className="text-muted whitespace-pre-line">{text}</p>
+        </div>
+        <div className="shrink-0 px-6 pt-4 pb-8 grid gap-2 border-t border-line mt-4">
           <button className={tone === 'success' ? 'btn-success' : 'btn-primary'} onClick={onConfirm} disabled={busy}>
             {busy ? t('busy') : confirmLabel}
           </button>

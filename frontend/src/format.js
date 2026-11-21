@@ -43,5 +43,18 @@ export function dueText(n, lang = 'ru') {
   return `через ${days(n, lang)}`
 }
 
+// "3 837 500,00 so'm" split so the decimals can be drawn smaller (card style)
+export function amountParts(n) {
+  const v = Math.round(n || 0)
+  return { int: `${v < 0 ? '−' : ''}${Math.abs(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}`, dec: ',00' }
+}
+
+// 1.07.2027
+export function dateShort(iso) {
+  if (!iso) return '—'
+  const [y, m, d] = iso.slice(0, 10).split('-').map(Number)
+  return `${d}.${String(m).padStart(2, '0')}.${y}`
+}
+
 export const digitsOnly = (s) => Number(String(s).replace(/\D/g, '').slice(0, 13)) || 0
 export const groupDigits = (n) => (n ? String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') : '')

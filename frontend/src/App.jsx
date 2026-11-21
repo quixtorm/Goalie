@@ -7,6 +7,7 @@ import GuardianSheet from './components/GuardianSheet'
 import Header from './components/Header'
 import TabBar from './components/TabBar'
 import { ErrorBox, Skeleton, Toast } from './components/ui'
+import CardGallery from './pages/CardGallery'
 import CreateGoal from './pages/CreateGoal'
 import GoalDetail from './pages/GoalDetail'
 import Goals from './pages/Goals'
@@ -47,7 +48,7 @@ export default function App() {
     openGuardian: (r) => setGuardian(r),
   }), [state, lang, hidden, refresh])
 
-  const tab = { goal: 'goals', create: 'goals' }[route.name] || route.name
+  const tab = { goal: 'goals', create: 'goals', cards: 'more' }[route.name] || route.name
 
   let page
   if (error && !state) page = <ErrorBox text={error} onRetry={refresh} />
@@ -57,6 +58,7 @@ export default function App() {
   else if (route.name === 'goals') page = <Goals />
   else if (route.name === 'payments') page = <Obligations />
   else if (route.name === 'more') page = <More />
+  else if (route.name === 'cards') page = <CardGallery />
   else page = <Home />
 
   return (

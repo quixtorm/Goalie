@@ -1,6 +1,6 @@
 import { useApp } from '../ctx'
 import { date, dueText } from '../format'
-import SubcardStack from '../components/SubcardStack'
+import WalletStack from '../components/WalletStack'
 import ProposalCard from '../components/ProposalCard'
 import { Chip, Icon, Money, Progress } from '../components/ui'
 
@@ -34,27 +34,9 @@ export default function Home() {
           <span className="rounded-full bg-white/15 px-3 py-1 text-sm font-semibold text-white">UZS</span>
         </div>
 
-        <SubcardStack goals={state.goals} max={state.limits.max_goals} />
-
-        {/* main card */}
-        <div className="relative rounded-[22px] p-5 text-white shadow-glow bg-gradient-to-br from-[#1F5FC0] via-[#174A9A] to-[#0B2A6F] overflow-hidden">
-          <div className="absolute -right-10 -top-12 w-48 h-48 rounded-full bg-white/10" aria-hidden />
-          <div className="absolute -right-4 top-16 w-32 h-32 rounded-full bg-white/5" aria-hidden />
-          <div className="relative flex justify-between items-start">
-            <span className="font-extrabold tracking-wide">SmartGoal</span>
-            <span className="w-10 h-7 rounded-md bg-gradient-to-br from-amber-200 to-amber-400 opacity-90" aria-hidden />
-          </div>
-          <p className="relative mt-5 text-white/75 text-sm">{t('mainCardLabel')}</p>
-          <Money value={m.main_balance} className="relative block text-3xl font-bold mt-1" />
-          <div className="relative mt-4 flex justify-between items-end">
-            <div>
-              <p className="text-white/70 text-xs">{t('freeToSpend')}</p>
-              <Money value={Math.max(0, m.free_to_spend)} className="font-semibold" />
-            </div>
-            <span className="num tracking-widest text-white/80">•••• 4521</span>
-          </div>
-          {m.cash_gap && <p className="relative mt-3 text-amber-200 text-sm">⚠ {t('cashGap')}</p>}
-        </div>
+        {/* subcards fanned behind the main card (wallet) */}
+        <WalletStack />
+        {m.cash_gap && <p className="mt-3 text-amber-200 text-sm">⚠ {t('cashGap')}</p>}
       </section>
 
       <div className="space-y-7">

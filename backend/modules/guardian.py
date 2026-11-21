@@ -80,6 +80,7 @@ def stop_view(s: State, stop: Stop) -> dict:
     """Stop numbers + labels in the current language."""
     _, src = _source(s, stop.source_id)
     return {**stop.numbers, "label": mcc_mod.label(stop.mcc), "source_name": disp(src), "status": stop.status,
+            "source_id": stop.source_id, "ready_at": stop.ready_at.isoformat() if stop.ready_at else None,
             "options": options_for(stop)}
 
 

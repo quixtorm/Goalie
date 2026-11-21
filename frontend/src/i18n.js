@@ -65,6 +65,19 @@ const ru = {
   gKept: (r) => `Бонус ${r}% годовых сохранён`, gGoalBy: (d, m) => `Цель будет собрана до ${d} (${m})`,
   ok: 'Хорошо', done: 'Готово', cancel: 'Отмена', back: 'Назад', retry: 'Попробовать снова', recent: 'Последние операции',
   busy: 'Секунду…',
+  cardMain: 'Основная карта', untilShort: (d) => `до ${d}`, pctIncomeShort: (p) => `${p}% дохода`,
+  useChip: 'Использовать', coolingLeft: (h) => `пауза · ещё ${h} ч`, details: 'Подробнее',
+  addSlot: 'Подкарта', dragHint: 'Удерживайте карту и тяните, чтобы поменять приоритет',
+  actUse: 'Использовать', actPriority: 'Приоритет', actClose: 'Закрыть',
+  rowGoal: 'Данные цели', rowGoalSub: (p) => `${p}% дохода · сроки и прогноз`,
+  rowBonus: 'Бонус за дисциплину', rowBonusSub: (r, b) => `${r}% годовых · начислено ${b}`,
+  rowHistory: 'История операций', rowHistorySub: 'Пополнения и покупки',
+  rowAgent: 'Спросить агента', rowAgentSub: 'Про эту цель',
+  askAboutGoal: (n) => `Как идут дела с целью «${n}»? Успеваю ли я в срок и что можно улучшить?`,
+  reorderTitle: 'Порядок пополнения', noHistory: 'Операций по этой цели пока нет.',
+  contribution: 'Пополнение с зарплаты', gallery: 'Галерея карт', galleryHint: 'Все состояния карты для проверки дизайна',
+  issued: 'Карта выпущена!', yourCard: 'Ваша карта', rate: 'Ставка', bonusNow: 'Начислено',
+  stNear: 'Почти у цели', stLocked: 'Защищена', stCompleted: 'Собрано', stCooling: 'Пауза 24 часа', stGhost: 'Пустой слот',
 }
 
 const uz = {
@@ -133,6 +146,19 @@ const uz = {
   gKept: (r) => `Yillik ${r}% bonus saqlandi`, gGoalBy: (d, m) => `Maqsad ${d} gacha yig'iladi (${m})`,
   ok: 'Yaxshi', done: 'Tayyor', cancel: 'Bekor qilish', back: 'Orqaga', retry: 'Qayta urinish', recent: "So'nggi operatsiyalar",
   busy: 'Bir soniya…',
+  cardMain: 'Asosiy karta', untilShort: (d) => `${d} gacha`, pctIncomeShort: (p) => `${p}% daromaddan`,
+  useChip: 'Ishlatish', coolingLeft: (h) => `pauza · yana ${h} soat`, details: 'Batafsil',
+  addSlot: 'Kichik karta', dragHint: "Ustuvorlikni o'zgartirish uchun kartani bosib turib suring",
+  actUse: 'Ishlatish', actPriority: 'Ustuvorlik', actClose: 'Yopish',
+  rowGoal: "Maqsad ma'lumotlari", rowGoalSub: (p) => `daromadning ${p}% · muddat va prognoz`,
+  rowBonus: 'Intizom bonusi', rowBonusSub: (r, b) => `yillik ${r}% · hisoblangan ${b}`,
+  rowHistory: 'Operatsiyalar tarixi', rowHistorySub: "To'ldirishlar va xaridlar",
+  rowAgent: "Agentdan so'rash", rowAgentSub: 'Shu maqsad haqida',
+  askAboutGoal: (n) => `«${n}» maqsadim qanday ketyapti? Muddatga ulguramanmi va nimani yaxshilash mumkin?`,
+  reorderTitle: "To'ldirish tartibi", noHistory: "Bu maqsad bo'yicha hali operatsiyalar yo'q.",
+  contribution: "Maoshdan to'ldirish", gallery: "Kartalar ko'rinishi", galleryHint: 'Dizaynni tekshirish uchun kartaning barcha holatlari',
+  issued: 'Karta chiqarildi!', yourCard: 'Sizning kartangiz', rate: 'Stavka', bonusNow: 'Hisoblangan',
+  stNear: 'Maqsadga oz qoldi', stLocked: 'Himoyalangan', stCompleted: "Yig'ildi", stCooling: 'Pauza 24 soat', stGhost: "Bo'sh joy",
 }
 
 export const DICT = { ru, uz }

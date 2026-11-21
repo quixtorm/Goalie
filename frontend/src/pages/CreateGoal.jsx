@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../api'
 import { useApp } from '../ctx'
 import { date, digitsOnly, groupDigits, months, uzs } from '../format'
+import BankCard from '../components/BankCard'
 import { BackButton, ConfirmSheet, Icon, Money, Row } from '../components/ui'
 
 export default function CreateGoal() {
@@ -14,6 +15,7 @@ export default function CreateGoal() {
   const [err, setErr] = useState(null)
   const [confirm, setConfirm] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [issued, setIssued] = useState(null)
 
   useEffect(() => {
     if (!amount || cap < 1) { setPv(null); return }
@@ -27,6 +29,15 @@ export default function CreateGoal() {
     send: amount ? t('askAgentGoal', uzs(amount), name.trim() || t('newGoal').toLowerCase()) : t('askAgentEmpty'),
   })
 
+  if (issued) {
+    return (
+      <div className="pt-16 text-center">
+        <div className="animate-card-issue"><BankCard goal={issued} tilt={false} /></div>
+        <p className="mt-8 text-2xl font-bold animate-rise" style={{ animationDelay: '600ms' }}>✨ {t('issued')}</p>
+      </div>
+    )
+  }
+
   if (cap < 1 || state.goals.filter((g) => g.status === 'active').length >= state.limits.max_goals) {
     return (
       <div className="space-y-4 pt-4">
@@ -39,19 +50,25 @@ export default function CreateGoal() {
   async function create() {
     setBusy(true)
     try {
-      await api.createGoal({ name: name.trim(), amount, percent })
-      notify({ text: `${t('done')}: «${name.trim()}»` })
+      const g = await api.createGoal({ name: name.trim(), amount, percent })
+      setConfirm(false)
+      setIssued(g) // card-issue animation, then go to the goals list
       refresh()
-      go('goals')
+      setTimeout(() => { notify({ text: t('issued') }); go('goal', { id: g.id }) }, 1500)
     } catch (e) {
       notify({ text: e.message, error: true })
+      setConfirm(false)
     } finally {
       setBusy(false)
-      setConfirm(false)
     }
   }
 
   const valid = name.trim() && amount > 0 && pv
+  // live card preview: the card being "issued" while the user types
+  const preview = {
+    name: name.trim(), saved: 0, amount, percent, progress: 0, status: 'active',
+    priority: state.goals.filter((x) => x.status === 'active').length + 1, expiry: pv?.expiry,
+  }
 
   return (
     <div className="space-y-5 pt-4">
@@ -63,6 +80,10 @@ export default function CreateGoal() {
           <Icon name="sparkle" size={18} fill strokeWidth={0} /> {t('askAgent')}
         </button>
       </div>
+
+      <section aria-label={t('yourCard')}>
+        <BankCard goal={preview} tilt={false} />
+      </section>
 
       <section className="card space-y-4">
         <div>
