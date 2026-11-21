@@ -1,0 +1,19 @@
+{
+  "voice": "speko/openai:gpt-4o-mini-tts/echo",
+  "voice_options": {
+    "speko/openai:gpt-4o-mini-tts/echo": "Speko → OpenAI gpt-4o-mini-tts, voice Echo (calm male). Default.",
+    "speko/deepgram:aura-2/aura-2-thalia-en": "Speko → Deepgram Aura-2, voice Thalia (clear American female).",
+    "speko/deepgram:flux/flux-miles-en": "Speko → Deepgram Flux, voice Miles (calm American male).",
+    "edge/en-US-AndrewNeural": "edge-tts (free, no key), voice Andrew. Fully scripted: qa/narrate.py generates it."
+  },
+  "speko_instructions": "Calm, clear, neutral product narration at a natural human pace. Not theatrical.",
+  "fallback_voice": "edge/en-US-AndrewNeural",
+  "scenes": [
+    {"id": "home", "text_en": "Meet Goalie, an AI financial agent inside your banking app. Your goals live as subcards under your main card."},
+    {"id": "salary", "text_en": "When your salary arrives, Goalie splits it for you. Rent is reserved first, then your goals by priority, and the rest stays on your main card. Only salary counts, so a transfer from family never changes the plan."},
+    {"id": "guardian", "text_en": "Try to spend from a goal on the cinema, and Goalie steps in. It shows what it would cost in days and bonus, and suggests waiting until tomorrow. A pharmacy purchase passes instantly, because the category is decided by code, not by what you type."},
+    {"id": "plan", "text_en": "Tell the agent your goal in plain words. It picks the percent from your worst annual salary, so the plan holds even in a bad year."},
+    {"id": "credit", "text_en": "Ask about a loan, and it ranks the demo offers by total cost, shows how each one delays your goals, and compares them with simply saving. Nothing is applied without your confirmation."},
+    {"id": "end", "text_en": "Goalie: code calculates, AI explains, you decide."}
+  ]
+}

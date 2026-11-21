@@ -158,7 +158,7 @@ export default function WalletStack() {
           const isDrag = drag && it.g && drag.id === it.g.id
           const y = isDrag ? drag.from * STEP + drag.dy : p.y
           return (
-            <div key={it.g ? it.g.id : 'ghost'} className="absolute inset-x-0 top-0"
+            <div key={it.g ? it.g.id : 'ghost'} data-fly={it.g?.id} className="absolute inset-x-0 top-0"
               style={{
                 transform: `translateY(${y}px) scale(${isDrag ? 1.04 : p.s})`, transformOrigin: 'top center',
                 zIndex: isDrag ? 80 : sel === j ? 70 : p.z, transition: isDrag ? 'none' : SPRING,
@@ -185,7 +185,7 @@ export default function WalletStack() {
           </button>
         )}
 
-        <div className="absolute inset-x-0 top-0" style={{ transform: `translateY(${mainPos.y}px)`, zIndex: mainPos.z, transition: SPRING }}>
+        <div data-fly="main" className="absolute inset-x-0 top-0" style={{ transform: `translateY(${mainPos.y}px)`, zIndex: mainPos.z, transition: SPRING }}>
           <BankCard kind="main" main={{ balance: state.main.main_balance, free: Math.max(0, state.main.free_to_spend) }}
             onClick={() => { if (open) { setOpen(false); setSel(null) } else if (N > 0 && cards.length) setOpen(true) }} />
         </div>

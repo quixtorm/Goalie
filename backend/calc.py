@@ -483,6 +483,11 @@ class ObligationStatus:
     status: str  # ok | soon | shortfall | overdue | paid
 
 
+def progress_pct(saved: int, amount: int) -> int:
+    """Goal progress in whole percent, capped at 100."""
+    return min(100, round(saved * 100 / amount)) if amount else 0
+
+
 def obligation_status(amount: int, reserved: int, due: date, today: date, paid: bool) -> ObligationStatus:
     due_in = (due - today).days
     short = max(0, amount - reserved)

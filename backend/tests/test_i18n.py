@@ -93,3 +93,57 @@ def test_switching_language_rerenders_stored_items(c):
     ru = c.get("/state").json()["transactions"][0]["title"]
     uz = c.get("/state", headers=UZ).json()["transactions"][0]["title"]
     assert (ru, uz) == ("Зарплата", "Maosh")
+
+
+# ---------------- English ----------------
+EN = {"X-Lang": "en"}
+
+
+def test_english_dictionary_matches_russian():
+    import texts
+    import texts_en
+    ph = lambda s: sorted(set(re.findall(r"{(\w+)}", s)))  # noqa: E731
+    assert set(texts_en.EN) == set(texts.T)
+    assert [k for k in texts.T if ph(texts.T[k][0]) != ph(texts_en.EN[k])] == []
+
+
+def test_full_demo_in_english_has_no_russian(c):
+    st = no_cyrillic(c.get("/state", headers=EN))
+    assert [g["name"] for g in st["goals"]] == ["Phone"]
+    assert st["obligations"][0]["name"] == "Apartment rent"
+    assert any("groceries" in t["title"] for t in st["transactions"])
+    no_cyrillic(c.get("/mcc", headers=EN))
+
+    r = no_cyrillic(c.post("/agent/chat", json={"message": "I want to save 50 million for a car in 3 years",
+                                                "lang": "en"}))
+    assert r["data"]["percent"] == 21 and "Create the goal?" in r["reply"] and "December 1, 2029" in r["reply"]
+    no_cyrillic(c.post("/agent/chat", json={"message": "yes", "lang": "en"}))
+    car = next(g for g in c.get("/state", headers=EN).json()["goals"] if g["name"] == "Car")
+
+    flow = no_cyrillic(c.post("/demo/salary", json={"amount": 6_375_000}, headers=EN))
+    assert [b["label"] for b in flow["breakdown"]] == ["Apartment rent", "Phone", "Car", "Main card"]
+    drift = next(p for p in no_cyrillic(c.get("/agent/inbox", headers=EN))
+                 if p["kind"] == "goal_percent" and p["status"] == "pending")
+    assert "falling behind" in drift["title"] and drift["options"][0]["label"] == "Set 22%"
+    no_cyrillic(c.post(f"/agent/proposals/{drift['id']}/confirm", headers=EN))
+
+    stop = no_cyrillic(c.post("/spend", json={"source_id": car["id"], "amount": 150_000, "mcc": "7832",
+                                              "merchant": "Magic Cinema"}, headers=EN))
+    assert stop["label"] == "Cinema"
+    no_cyrillic(c.post(f"/spend/{stop['stop_id']}/resolve", json={"option": "cooling"}, headers=EN))
+    ok = no_cyrillic(c.post("/spend", json={"source_id": car["id"], "amount": 300_000, "mcc": "5912",
+                                            "merchant": "Dori-Darmon"}, headers=EN))
+    assert ok["label"] == "Pharmacy"
+    r = no_cyrillic(c.post("/agent/chat", json={"message": "Phone loan 20 million for 12 months at 28%", "lang": "en"}))
+    assert r["data"]["payment"] == 1_930_120
+    no_cyrillic(c.post("/agent/chat", json={"message": "My payments", "lang": "en"}))
+    no_cyrillic(c.post("/agent/chat", json={"message": "How much can I spend?", "lang": "en"}))
+    no_cyrillic(c.post("/demo/transfer-in", json={"amount": 2_000_000, "source": "Family"}, headers=EN))
+    no_cyrillic(c.post("/agent/chat", json={"message": "Why are family transfers not counted in the plan?",
+                                            "lang": "en"}))
+    adv = no_cyrillic(c.post("/agent/chat", json={"message": "Recommend the best low-interest loan for a computer, "
+                                                             "15 million", "lang": "en"}))
+    assert adv["credit_advice"]["best"]["name"] == "Consumer Standard"
+    no_cyrillic(c.post("/credits/advise", json={"amount": 15_000_000}, headers=EN))
+    no_cyrillic(c.post("/demo/salary", json={"amount": -1}, headers=EN))
+    no_cyrillic(c.get("/state", headers=EN))

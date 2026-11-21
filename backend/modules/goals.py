@@ -19,7 +19,7 @@ def view(s: State, g: Goal) -> dict:
     return {
         "id": g.id, "name": disp(g), "amount": g.amount, "saved": g.saved, "percent": g.percent,
         "priority": g.priority,
-        "progress": min(100, round(g.saved * 100 / g.amount)) if g.amount else 0,
+        "progress": calc.progress_pct(g.saved, g.amount),
         "remaining": f.remaining, "months_worst": f.months_worst, "months_best": f.months_best,
         "expiry": f.expiry.isoformat(), "contribution_worst": f.contribution_worst,
         "contribution_avg": f.contribution_avg, "disciplined": g.disciplined,

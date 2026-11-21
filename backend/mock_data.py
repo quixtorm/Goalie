@@ -7,9 +7,9 @@ from texts import both, msg
 
 START = datetime(2026, 12, 1, 9, 0)
 
-FAMILY = both("Семья", "Oila")
-WORK = both("Зарплата", "Ish haqi")
-CLIENT = both("Клиент", "Mijoz")
+FAMILY = both("Семья", "Oila", "Family")
+WORK = both("Зарплата", "Ish haqi", "Salary")
+CLIENT = both("Клиент", "Mijoz", "Client")
 
 # 12 months of SALARY. The planning window is the last 6 (worst 6 800 000, avg 7 500 000 — the verified demo numbers);
 # the earlier months are all >= 6 800 000, so they do not change the worst month either.
@@ -40,11 +40,11 @@ def seed() -> State:
     )
     s.goals["goal_phone"] = Goal(
         id="goal_phone", name="Телефон", amount=8_000_000, saved=3_200_000, percent=10,
-        disciplined=True, planned_months_left=8, priority=1, names={"ru": "Телефон", "uz": "Telefon"},
+        disciplined=True, planned_months_left=8, priority=1, names={"ru": "Телефон", "uz": "Telefon", "en": "Phone"},
     )
     s.obligations["obl_rent"] = Obligation(
         id="obl_rent", name="Аренда квартиры", amount=2_500_000, due_date=date(2026, 12, 7),
-        reserved=1_000_000, monthly=True, names={"ru": "Аренда квартиры", "uz": "Kvartira ijarasi"},
+        reserved=1_000_000, monthly=True, names={"ru": "Аренда квартиры", "uz": "Kvartira ijarasi", "en": "Apartment rent"},
     )
     tx = [
         ("2026-11-30", msg("tx_groceries", shop="Korzinka"), -186_000, "5411", None),

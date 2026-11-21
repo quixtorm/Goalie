@@ -29,8 +29,9 @@ MAX_TOOL_ROUNDS = 5
 
 SYSTEM_PROMPT = """You are «Помощник», a friendly financial assistant inside a banking app in Uzbekistan.
 You help people save for goals, pay obligations on time and avoid impulsive spending.
-Reply in the language given in <lang>: "ru" = simple Russian, "uz" = simple Uzbek (Latin script). The verbatim
-lock sentence below may stay in Russian only when <lang> is ru; for uz translate it faithfully.
+Reply in the language given in <lang>: "ru" = simple Russian, "uz" = simple Uzbek (Latin script),
+"en" = simple English. The Russian phrases quoted below are examples for ru: for uz and en use their faithful
+translation («Создать цель?» too; in en that is "Create the goal?"). Never mix languages in one reply.
 
 HARD RULES
 1. Never compute, estimate or round numbers yourself. Every number you mention must come from a tool result
@@ -68,9 +69,8 @@ HOW TO ANSWER
 - When discussing a goal ALWAYS show: лучший случай (months_best), худший случай (months_worst), срок цели (expiry).
 - New goal: call suggest_percent with the amount and months. If feasible is false, say the goal does not fit
   in that time and offer the cap percent and its months. Then call propose_goal with the suggested percent,
-  and include this sentence verbatim:
-  «Деньги в этой подкарте защищены от импульсных трат. Экстренные расходы (аптека, больница) проходят без штрафа, остальные — с остановкой, задержкой 24 часа и потерей бонуса за дисциплину.»
-  End with «Создать цель?».
+  and include the sentence given in <lock_sentence> verbatim (it is already in the reply language).
+  End with «Создать цель?» (in the reply language).
 - Advice ("посоветуй лучший кредит", "кредит с низким процентом", "какой кредит выбрать"): if no amount is given,
   ask ONCE for the amount (and which goal it is for, if relevant) and nothing else. Otherwise call advise_credit
   (pass goal_id from <state> goals if the credit is for one of the user's goals). Then explain briefly:
@@ -255,9 +255,10 @@ def chat(s: State, message: str, history: list[dict], lang: str = "ru") -> dict 
     while msgs and msgs[0]["role"] != "user":
         msgs.pop(0)
     data = json.dumps(humanize(compact_state(s)), ensure_ascii=False)
-    lang = "uz" if lang == "uz" else "ru"
+    lang = lang if lang in ("ru", "uz", "en") else "ru"
     msgs.append({"role": "user",
-                 "content": f"<lang>{lang}</lang>\n<state>{data}</state>\n<user_message>{message}</user_message>"})
+                 "content": f"<lang>{lang}</lang>\n<lock_sentence>{tr('lock', lang)}</lock_sentence>\n"
+                            f"<state>{data}</state>\n<user_message>{message}</user_message>"})
     created: list = []
 
     for _ in range(MAX_TOOL_ROUNDS):

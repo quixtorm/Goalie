@@ -30,7 +30,11 @@ MCC_TABLE: dict[str, tuple[Category, str, str]] = {
     "6513": (Category.OBLIGATION, "Аренда жилья", "Uy ijarasi"),
     "6012": (Category.OBLIGATION, "Платёж по кредиту", "Kredit to'lovi"),
 }
-UNKNOWN_LABEL = {"ru": "Покупка", "uz": "Xarid"}
+UNKNOWN_LABEL = {"ru": "Покупка", "uz": "Xarid", "en": "Purchase"}
+EN_LABEL = {"5912": "Pharmacy", "8062": "Hospital", "8011": "Doctor", "8021": "Dentist", "8099": "Medical services",
+            "4119": "Ambulance", "7832": "Cinema", "5812": "Restaurant", "5814": "Fast food", "5813": "Bar",
+            "7993": "Video games", "7941": "Sports events", "5311": "Department store", "5999": "Other goods",
+            "6513": "Rent", "6012": "Loan payment"}
 
 
 def classify(mcc: str) -> Category:
@@ -40,9 +44,9 @@ def classify(mcc: str) -> Category:
 
 
 def labels(mcc: str) -> dict:
-    """Label in both languages (for stored messages)."""
+    """Label in every language (for stored messages)."""
     entry = MCC_TABLE.get(mcc)
-    return {"ru": entry[1], "uz": entry[2]} if entry else dict(UNKNOWN_LABEL)
+    return {"ru": entry[1], "uz": entry[2], "en": EN_LABEL[mcc]} if entry else dict(UNKNOWN_LABEL)
 
 
 def label(mcc: str) -> str:

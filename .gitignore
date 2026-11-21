@@ -11,3 +11,13 @@ dist/
 # QA recordings (large binaries; re-create with qa/record_demo.py)
 qa/video/
 qa/demo_video.zip
+
+# narration audio (re-create with qa/narrate.py; samples are in the zip)
+qa/audio/en/*.mp3
+qa/audio/samples/*.wav
+qa/audio/samples/*.mp3
+qa/demo_video_en.zip
+
+# local tooling and build prompt (not part of the project)
+.claude/
+PROMPT_v2.md

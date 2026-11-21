@@ -50,6 +50,15 @@ def test_step2_salary_drop_and_new_percent(c):
     assert [g["name"] for g in flow["goals"]] == ["Машина", "Телефон"]  # priority order
     assert flow["shortfalls"] == []
     assert flow["main"] == 2_898_750
+    # breakdown for the "salary split" sheet: waterfall order, sums to the salary
+    bd = flow["breakdown"]
+    assert [(b["type"], b["label"], b["amount"]) for b in bd] == [
+        ("obligation", "Аренда квартиры", 1_500_000), ("goal", "Машина", 1_338_750),
+        ("goal", "Телефон", 637_500), ("main", "Основная карта", 2_898_750)]
+    assert sum(b["amount"] for b in bd) == 6_375_000
+    assert [b["target_id"] for b in bd][0] == "obl_rent" and bd[-1]["target_id"] == "main"
+    assert bd[1]["priority"] == 1 and bd[1]["percent"] == 21
+    assert all(b["progress_after"] >= b["progress_before"] for b in bd if b["type"] != "main")
     st = c.get("/state").json()
     assert st["main"]["main_balance"] == 14_898_750
     assert st["income"]["worst"] == 6_375_000

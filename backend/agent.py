@@ -16,7 +16,7 @@ from texts import tr
 
 log = logging.getLogger("agent")
 
-CONFIRM_RE = re.compile(r"^\s*(да|подтверждаю|ок|окей|давай|создай|yes|ha|xa|tasdiqlayman|mayli)\s*[.!]?\s*$",
+CONFIRM_RE = re.compile(r"^\s*(да|подтверждаю|ок|окей|давай|создай|yes|ok|okay|confirm|sure|ha|xa|tasdiqlayman|mayli)\s*[.!]?\s*$",
                         re.IGNORECASE)
 
 

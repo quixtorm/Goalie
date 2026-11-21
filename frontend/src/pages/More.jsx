@@ -1,6 +1,7 @@
 import { useApp } from '../ctx'
 import DemoPanel from '../components/DemoPanel'
 import { Icon } from '../components/ui'
+import { LANGS } from '../i18n'
 
 export default function More() {
   const { state, t, lang, setLang, hidden, setHidden, go } = useApp()
@@ -15,12 +16,12 @@ export default function More() {
       </section>
 
       <section className="card space-y-4">
-        <div className="flex items-center justify-between gap-3">
+        <div className="space-y-3">
           <span className="flex items-center gap-2 font-semibold"><Icon name="globe" size={20} /> {t('language')}</span>
-          <div className="flex rounded-full bg-card2 border border-line p-1" role="radiogroup" aria-label={t('language')}>
-            {[['ru', 'Русский'], ['uz', "O'zbekcha"]].map(([k, l]) => (
+          <div className="grid grid-cols-3 rounded-full bg-card2 border border-line p-1" role="radiogroup" aria-label={t('language')}>
+            {LANGS.map(([k, l]) => (
               <button key={k} role="radio" aria-checked={lang === k} onClick={() => setLang(k)}
-                className={`press rounded-full px-4 min-h-[40px] text-sm font-semibold ${lang === k ? 'bg-brand text-white' : 'text-muted'}`}>{l}</button>
+                className={`press rounded-full px-2 min-h-[40px] text-sm font-semibold ${lang === k ? 'bg-brand text-white' : 'text-muted'}`}>{l}</button>
             ))}
           </div>
         </div>

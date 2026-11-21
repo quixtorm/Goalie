@@ -161,7 +161,7 @@ class ChatTurn(Strict):
 class ChatIn(Strict):
     message: str = Field(min_length=1, max_length=1000)
     history: list[ChatTurn] = Field(default_factory=list, max_length=20)
-    lang: Literal["ru", "uz"] = "ru"
+    lang: Literal["ru", "uz", "en"] = "ru"
 
 
 class AdviseIn(Strict):

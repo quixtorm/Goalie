@@ -14,7 +14,8 @@ from state import State
 from texts import tr
 
 UNITS = {"млрд": 10**9, "миллиард": 10**9, "млн": 10**6, "миллион": 10**6, "тыс": 10**3, "k": 10**3, "к": 10**3,
-         "mlrd": 10**9, "milliard": 10**9, "mln": 10**6, "million": 10**6, "ming": 10**3}
+         "mlrd": 10**9, "milliard": 10**9, "mln": 10**6, "million": 10**6, "ming": 10**3,
+         "billion": 10**9, "bn": 10**9, "thousand": 10**3}
 
 GOAL_NAMES = [
     ("машин", "Машина"), ("авто", "Машина"), ("телефон", "Телефон"), ("айфон", "Телефон"),
@@ -23,6 +24,13 @@ GOAL_NAMES = [
     ("ноутбук", "Ноутбук"), ("хадж", "Хадж"), ("умр", "Умра"), ("бизнес", "Бизнес"), ("ремонт", "Ремонт"),
     ("mashin", "Mashina"), ("telefon", "Telefon"), ("uy", "Uy"), ("kvartira", "Kvartira"), ("to'y", "To'y"),
     ("sayohat", "Sayohat"), ("noutbuk", "Noutbuk"), ("o'qish", "O'qish"),
+]
+# English goal words: whole-word patterns, checked first (a stem like Uzbek "uy" would match inside "buy")
+EN_GOAL_NAMES = [
+    (r"\bcars?\b|\bauto\b", "Car"), (r"\b(?:i)?phones?\b", "Phone"), (r"\bapartment|\bflat\b", "Apartment"),
+    (r"\bhouse\b|\bhome\b", "House"), (r"vacation|holiday|\btrip\b|travel", "Trip"), (r"wedding", "Wedding"),
+    (r"\bstud(?:y|ies)\b|tuition|university|education", "Education"), (r"laptop|computer", "Laptop"),
+    (r"\bbusiness\b", "Business"), (r"renovation|\brepairs?\b", "Renovation"),
 ]
 
 
@@ -38,17 +46,17 @@ def parse(text: str) -> dict:
     if m:
         out["rate"] = _num(m.group(1))
         t = t[:m.start()] + " " + t[m.end():]
-    m = re.search(r"(\d+(?:[.,]\d+)?)\s*(год|года|лет|мес\w*|yil\w*|oy\w*)", t)
+    m = re.search(r"(\d+(?:[.,]\d+)?)\s*(год|года|лет|мес\w*|yil\w*|oy\w*|years?\b|months?\b|mo\b)", t)
     if m:
         n = _num(m.group(1))
-        out["months"] = int(n * 12) if m.group(2).startswith(("год", "лет", "yil")) else int(n)
+        out["months"] = int(n * 12) if m.group(2).startswith(("год", "лет", "yil", "year")) else int(n)
         t = t[:m.start()] + " " + t[m.end():]
     elif "полгода" in t:
         out["months"] = 6
-    elif re.search(r"\bза год\b|\bна год\b", t):
+    elif re.search(r"\bза год\b|\bна год\b|\bin a year\b|\bfor a year\b", t):
         out["months"] = 12
     for m in re.finditer(r"(\d+(?:[.,]\d+)?)\s*(млрд|миллиард\w*|млн|миллион\w*|тыс\w*|mlrd|milliard\w*|mln|"
-                         r"million\w*|ming\w*|k\b|к\b)?", t):
+                         r"million\w*|ming\w*|billion\w*|bn\b|thousand\w*|k\b|к\b)?", t):
         unit = m.group(2)
         if unit:
             mult = next(v for k, v in UNITS.items() if unit.startswith(k))
@@ -58,32 +66,38 @@ def parse(text: str) -> dict:
         if val >= 1000:
             out["amount"] = int(val)
             break
-    for stem, name in GOAL_NAMES:
-        if stem in t:
+    for pat, name in EN_GOAL_NAMES:
+        if re.search(pat, t):
             out["name"] = name
             break
+    else:
+        for stem, name in GOAL_NAMES:
+            if stem in t:
+                out["name"] = name
+                break
     return out
 
 
 def intent(text: str) -> str:
     t = text.lower()
-    if re.search(r"перевод|переводы|transfer|o'tkazma|o‘tkazma|oila|семь|родн|близк", t) and \
-            re.search(r"почему|учит|счита|nega|hisob|план|reja|не идут|kirmay", t):
+    if re.search(r"перевод|переводы|transfer|o'tkazma|o‘tkazma|oila|семь|родн|близк|family|relative", t) and \
+            re.search(r"почему|учит|счита|nega|hisob|план|reja|не идут|kirmay|\bwhy\b|count|\bplan\b", t):
         return "income_types"
-    if re.search(r"кредит|рассроч|займ|заем|заём|в долг взять|kredit|nasiya", t):
+    if re.search(r"кредит|рассроч|займ|заем|заём|в долг взять|kredit|nasiya|\bloan|credit|borrow|installment", t):
         return "credit"
-    if re.search(r"накоп|копить|отлож|цел|мечт|собрать|yig'|yig‘|jamg'|maqsad|orzu", t):
+    if re.search(r"накоп|копить|отлож|цел|мечт|собрать|yig'|yig‘|jamg'|maqsad|orzu|\bsave\b|saving|\bgoal|dream", t):
         return "goal"
-    if re.search(r"аренд|долг|обязат|платеж|платёж|оплат|ijara|qarz|majburiyat|to'lov", t):
+    if re.search(r"аренд|долг|обязат|платеж|платёж|оплат|ijara|qarz|majburiyat|to'lov|\brent\b|\bdebt|payment|\bbills?\b", t):
         return "obligations"
-    if re.search(r"сколько|остат|баланс|потрат|хватит|свобод|на жизнь|qancha|balans|sarfla", t):
+    if re.search(r"сколько|остат|баланс|потрат|хватит|свобод|на жизнь|qancha|balans|sarfla|how much|balance|\bspend|afford|\bleft\b", t):
         return "cashflow"
     return "help"
 
 
 ADVICE_RE = re.compile(r"посовет|совет|подбер|подобр|лучш|низк|выгодн|дешев|tavsiya|maslahat|eng yaxshi|arzon|past foiz|"
-                       r"tanla|qaysi kredit", re.I)
-CREDIT_RE = re.compile(r"кредит|займ|заём|рассроч|kredit|qarz|nasiya", re.I)
+                       r"tanla|qaysi kredit|recommend|advi[cs]e|suggest|\bbest\b|cheap|low(?:est)? interest|"
+                       r"low(?:est)? rate|which loan", re.I)
+CREDIT_RE = re.compile(r"кредит|займ|заём|рассроч|kredit|qarz|nasiya|\bloan|credit|borrow|installment", re.I)
 
 
 def is_credit_advice(message: str, p: dict) -> bool:

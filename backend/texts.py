@@ -1,4 +1,4 @@
-"""All user-facing server text in Russian and Uzbek (Latin).
+"""All user-facing server text in Russian, Uzbek (Latin) and English (texts_en.py).
 
 The language of the current request lives in a contextvar (set by main.py from the X-Lang header or the chat body).
 Stored things (proposals, transactions) keep a message *key + params* — msg(...) — and are rendered at view time,
@@ -12,11 +12,14 @@ from __future__ import annotations
 from contextvars import ContextVar
 from datetime import date
 
+from texts_en import EN, MONTHS_EN
+
 LANG: ContextVar[str] = ContextVar("lang", default="ru")
+LANGS = ("ru", "uz", "en")
 
 
 def set_lang(lang: str | None) -> None:
-    LANG.set("uz" if lang == "uz" else "ru")
+    LANG.set(lang if lang in LANGS else "ru")
 
 
 def cur() -> str:
@@ -29,6 +32,7 @@ MONTHS_GEN = {
            "декабря"],
     "uz": ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avgust", "sentabr", "oktabr", "noyabr",
            "dekabr"],
+    "en": MONTHS_EN,
 }
 
 
@@ -42,7 +46,9 @@ def fdate(d: date | str, lang: str | None = None) -> str:
     if isinstance(d, str):
         d = date.fromisoformat(d)
     m = MONTHS_GEN[lang][d.month - 1]
-    return f"{d.day}-{m} {d.year}" if lang == "uz" else f"{d.day} {m} {d.year}"
+    if lang == "uz":
+        return f"{d.day}-{m} {d.year}"
+    return f"{m} {d.day}, {d.year}" if lang == "en" else f"{d.day} {m} {d.year}"
 
 
 def _ru_plural(n: int, one: str, few: str, many: str) -> str:
@@ -55,11 +61,21 @@ def _ru_plural(n: int, one: str, few: str, many: str) -> str:
 
 
 def fmonths(n: int, lang: str | None = None) -> str:
-    return f"{n} oy" if (lang or cur()) == "uz" else f"{n} {_ru_plural(n, 'месяц', 'месяца', 'месяцев')}"
+    lang = lang or cur()
+    if lang == "uz":
+        return f"{n} oy"
+    if lang == "en":
+        return f"{n} month" if abs(n) == 1 else f"{n} months"
+    return f"{n} {_ru_plural(n, 'месяц', 'месяца', 'месяцев')}"
 
 
 def fdays(n: int, lang: str | None = None) -> str:
-    return f"{n} kun" if (lang or cur()) == "uz" else f"{n} {_ru_plural(n, 'день', 'дня', 'дней')}"
+    lang = lang or cur()
+    if lang == "uz":
+        return f"{n} kun"
+    if lang == "en":
+        return f"{n} day" if abs(n) == 1 else f"{n} days"
+    return f"{n} {_ru_plural(n, 'день', 'дня', 'дней')}"
 
 
 # ---------- dictionary: key -> (ru, uz) ----------
@@ -233,6 +249,7 @@ T: dict[str, tuple[str, str]] = {
     "gm_declined": ("Покупка отменена. Деньги остались на месте.", "Xarid bekor qilindi. Pul joyida qoldi."),
     # transactions
     "tx_salary": ("Зарплата", "Maosh"),
+    "bd_main": ("Основная карта", "Asosiy karta"),
     "tx_transfer": ("Перевод: {source}", "O'tkazma: {source}"),
     "tx_extra": ("Дополнительно в цель «{name}»", "«{name}» maqsadiga qo'shimcha"),
     "tx_reserve": ("В резерв «{name}»", "«{name}» zaxirasiga"),
@@ -332,8 +349,9 @@ def msg(key: str, **params) -> dict:
     return {"k": key, "p": params}
 
 
-def both(ru: str, uz: str | None = None) -> dict:
-    return {"ru": ru, "uz": uz if uz is not None else ru}
+def both(ru: str, uz: str | None = None, en: str | None = None) -> dict:
+    """A text in all languages (uz/en default to the Russian text, e.g. a name the user typed)."""
+    return {"ru": ru, "uz": uz if uz is not None else ru, "en": en if en is not None else (uz or ru)}
 
 
 def _val(name: str, v, lang: str):
@@ -356,7 +374,7 @@ def _val(name: str, v, lang: str):
 def tr(key: str, lang: str | None = None, **params) -> str:
     lang = lang or cur()
     ru, uz = T[key]
-    template = uz if lang == "uz" else ru
+    template = EN[key] if lang == "en" else uz if lang == "uz" else ru
     return template.format(**{k: _val(k, v, lang) for k, v in params.items()})
 
 
@@ -377,6 +395,6 @@ def disp(obj) -> str:
 
 
 def loc(obj) -> dict:
-    """Name of a goal/obligation in both languages (for stored messages)."""
+    """Name of a goal/obligation in every language (for stored messages)."""
     names = getattr(obj, "names", None) or {}
-    return {"ru": names.get("ru") or obj.name, "uz": names.get("uz") or obj.name}
+    return {lg: names.get(lg) or obj.name for lg in LANGS}

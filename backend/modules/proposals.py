@@ -232,18 +232,23 @@ def view(p: Proposal) -> dict:
 def salary(s: State, amount: int) -> dict:
     if amount <= 0 or amount > calc.MAX_AMOUNT:
         raise CalcError(tr("err_salary_positive"))
-    s.add_income(amount, calc.SALARY, both("Зарплата", "Ish haqi"))  # only SALARY records drive the plan
+    s.add_income(amount, calc.SALARY, both("Зарплата", "Ish haqi", "Salary"))  # only SALARY records drive the plan
     # bonus for the past month, before new contributions
     for g in budget.active_goals(s):
         g.accrued_bonus += calc.monthly_bonus(g.saved, g.disciplined)
     left = amount
     flow = {"salary": amount, "obligations": [], "goals": [], "shortfalls": [], "main": 0}
+    # ordered lines of the waterfall, for the "salary split" sheet (same numbers as the fields above)
+    breakdown: list[dict] = []
     for o in sorted((o for o in s.obligations.values() if not o.paid), key=lambda x: x.due_date):
         put = min(max(0, o.amount - o.reserved), left)
         if put:
             o.reserved += put
             left -= put
             flow["obligations"].append({"id": o.id, "name": disp(o), "amount": put})
+            breakdown.append({"type": "obligation", "target_id": o.id, "label": disp(o), "amount": put,
+                              "progress_before": calc.progress_pct(o.reserved - put, o.amount),
+                              "progress_after": calc.progress_pct(o.reserved, o.amount)})
     # goals in PRIORITY order: if money runs out, higher-priority goals are funded first
     for g in budget.active_goals(s):
         wanted = min(calc.round_money(calc.monthly_contribution(g.percent, amount)), g.amount - g.saved)
@@ -252,6 +257,10 @@ def salary(s: State, amount: int) -> dict:
             g.saved += put
             left -= put
             flow["goals"].append({"id": g.id, "name": disp(g), "priority": g.priority, "amount": put})
+            breakdown.append({"type": "goal", "target_id": g.id, "label": disp(g), "amount": put,
+                              "priority": g.priority, "percent": g.percent,
+                              "progress_before": calc.progress_pct(g.saved - put, g.amount),
+                              "progress_after": calc.progress_pct(g.saved, g.amount)})
         if put < wanted:
             flow["shortfalls"].append({"id": g.id, "name": disp(g), "priority": g.priority, "wanted": wanted,
                                        "funded": put, "shortfall": wanted - put})
@@ -261,11 +270,12 @@ def salary(s: State, amount: int) -> dict:
     budget.renumber(s)
     s.main_balance += left
     flow["main"] = left
+    breakdown.append({"type": "main", "target_id": "main", "label": msg("bd_main"), "amount": left})
     s.add_tx(msg("tx_salary"), amount, income_type=calc.SALARY)
     s.next_income_date = s.today + timedelta(days=calc.PAYDAY_INTERVAL_DAYS)
     s.last_salary = {**flow, "date": s.today.isoformat()}
     agent_review(s)
-    return flow
+    return {**flow, "breakdown": [{**b, "label": render(b["label"])} for b in breakdown]}
 
 
 def transfer_in(s: State, amount: int, source: str) -> dict:

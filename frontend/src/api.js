@@ -2,8 +2,10 @@
 // Every request carries X-Lang so server texts (tips, errors, guardian messages) come back in the UI language.
 // Single source of truth: <html lang>, set by App before it loads data (a module variable can be duplicated
 // by hot-reload, a DOM attribute cannot).
-export const setApiLang = (l) => { document.documentElement.lang = l === 'uz' ? 'uz' : 'ru' }
-const currentLang = () => (document.documentElement.lang === 'uz' ? 'uz' : 'ru')
+const LANG_CODES = ['ru', 'uz', 'en']
+const norm = (l) => (LANG_CODES.includes(l) ? l : 'ru')
+export const setApiLang = (l) => { document.documentElement.lang = norm(l) }
+const currentLang = () => norm(document.documentElement.lang)
 
 const NET_ERR = {
   ru: ['Нет связи с сервером. Проверьте, что бэкенд запущен.', 'Что-то пошло не так. Попробуйте ещё раз.'],

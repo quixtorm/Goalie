@@ -43,7 +43,7 @@ The AI agent opens from the header on every screen: the search field «Поис�
 |---|---|---|
 | 1 | Header search ✦ → chip «Хочу накопить 50 млн на машину за 3 года» → «Создать цель» (or type «да») | Agent sheet slides up: 21% of income (≈1 428 000 so'm/month), best 32 months, worst 36, deadline 1 декабря 2029, lock warning. Home: «Показать подкарты (2/3)». |
 | 1b | Tab «Цели» → ▲ on «Машина» | «Машина» becomes #1, «Телефон» #2. If a salary is too small, #1 is funded first and the shortfall is shown. |
-| 2 | «Ещё» → demo panel → preset «−15%» (6 375 000) → «Зачислить» | Rent first, then goals by priority (Машина, then Телефон), rest to the main card: 14 898 750. 🔔 1 → «Цель «Машина» отстаёт» → «Поставить 22%» → back to 35 months. |
+| 2 | «Ещё» → demo panel → preset «−15%» (6 375 000) → «Зачислить» | App jumps to Home; sheet «Goalie разложил зарплату»: Аренда +1 500 000 → #1 Машина +1 338 750 → #2 Телефон +637 500 → основная карта +2 898 750; each amount flies into its card and the progress bars grow (auto-closes after 3 s, or tap). 🔔 1 → «Цель «Машина» отстаёт» → «Поставить 22%» → back to 35 months. |
 | 3 | Same panel: purchase «#1 Машина», Кинотеатр (7832), 150 000 → «Оплатить картой» | ✋ Guardian sheet: goal delayed **3 days**, bonus lost over the next year **1 045 500 so'm** (22% → 12%). «Подождать до завтра». Then «Перемотать на 24 часа» → 🔔 «Прошли сутки…» → «Уже не нужно». |
 | 4 | Same panel: Аптека (5912), 300 000 → «Оплатить картой» | 💚 Paid with no penalty, 22% bonus kept, deadline unchanged. |
 | 4b | Same panel: Ресторан (5812), 100 000 → «Оплатить картой» → «Всё равно потратить» | 🔒 PIN sheet: wrong PIN «0000» → rejected, «осталось 2 попытки» (without a PIN the server returns 401). PIN **1234** → accepted, money spent. 🔔 «Вы подтвердили снятие 100 000 so'm… Это были не вы?» → «Отменить» → money back in the goal, 22% bonus restored. |
@@ -128,16 +128,33 @@ In production this would also need (not built): real authentication with 2FA, en
 - A salary event counts as "one month" for goals and bonus but does not move the clock.
 - The fallback agent understands a fixed set of phrasings (goal, credit, payments, balance).
 - Bonus rates 22% / 12% are demo values; who funds them is a business decision.
-- UI and all server texts (tips, guardian, errors, purchase types, transactions, fallback agent) are Russian and
-  Uzbek; the app sends `X-Lang` with every request. Names the user types (e.g. a new goal) stay as typed.
+- UI and all server texts (tips, guardian, errors, purchase types, transactions, fallback agent) are in Russian,
+  Uzbek and English (`backend/texts_en.py`). The app sends `X-Lang` with every request. Names the user types (e.g. a
+  new goal) stay as typed. `tests/test_i18n.py` runs the demo in Uzbek and in English and fails on any Cyrillic.
 - Goal priority uses ▲/▼ buttons instead of drag-and-drop (works with touch, keyboard and screen readers).
 
 ## Demo video (QA)
 
-Automated recording of the full scenario (Playwright, 390x844 phone view, fake cursor and captions). Start backend and frontend first, then:
+Automated recordings (Playwright, 390x844 phone view @2x, fake cursor and Russian captions). Two videos:
+
+- `demo_short.mp4` (~90 s pitch cut): salary split sheet, Guardian (cinema stopped, pharmacy passes), agent plan and
+  credit advisor (no application is sent), end card. Seeded before recording: «Машина» #1 with some progress,
+  «Телефон» #2, rent due in 6 days.
+- `demo_full.mp4` (~3 min): the full scenario above, including family transfer, priorities, obligations, PIN step-up
+  and the language toggle.
+
+Start backend and frontend first, then:
 
 ```powershell
 qa\.venv\Scripts\python.exe qa\record_demo.py
 ```
 
-Outputs `qa/video/demo.mp4`, `demo.webm`, `frames/`, `report.md` and `qa/demo_video.zip`. Setup: see `qa/video/report.md`.
+- `demo_en.mp4` (~86 s): the short cut with the UI in English and an English voice-over. The narration text and the
+  voice (one setting, `"voice"`) are in `qa/narration.json`. `qa/narrate.py` builds the scene audio (Speko
+  text-to-speech through its connector, edge-tts as a fallback) and `qa/audio/durations.json`. Each scene lasts at least
+  its audio + 0.5 s, and the clips are mixed into one AAC track. Voice samples are in `qa/audio/samples/` (see its README).
+  It is zipped separately as `qa/demo_video_en.zip`.
+
+Add `short`, `full` or `en` to record only one video. Outputs go to `qa/video/`: both mp4 files (H.264, under 50 MB each),
+`frames/` with one keyframe per step, and `report.md` with timestamps and problems found. Everything is also zipped
+into `qa/demo_video.zip`. For setup steps, see `qa/video/report.md`.

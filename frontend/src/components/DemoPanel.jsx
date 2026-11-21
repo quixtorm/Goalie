@@ -8,7 +8,7 @@ const MERCHANT = { '7832': 'Magic Cinema', '5912': 'Dori-Darmon', '5812': 'Plov 
 
 // Presenter-only controls, visually separate from the product UI.
 export default function DemoPanel() {
-  const { state, t, lang, notify, refresh, openGuardian } = useApp()
+  const { state, t, lang, notify, refresh, openGuardian, showSalary } = useApp()
   const [salary, setSalary] = useState(6375000)
   const [mccs, setMccs] = useState([])
   const [buy, setBuy] = useState({ source_id: '', mcc: '7832', amount: 150000, merchant: 'Magic Cinema' })
@@ -22,7 +22,7 @@ export default function DemoPanel() {
     ...state.obligations.map((o) => ({ id: o.id, label: `🛡 ${o.name}` })),
   ]
   const valid = sources.some((s) => s.id === buy.source_id)
-  const sourceId = valid ? buy.source_id : (sources.find((s) => /Машина|Mashina/.test(s.label))?.id || sources[0]?.id || '')
+  const sourceId = valid ? buy.source_id : (sources.find((s) => /Машина|Mashina|Car/.test(s.label))?.id || sources[0]?.id || '')
 
   async function run(fn, msg) {
     setBusy(true)
@@ -38,10 +38,18 @@ export default function DemoPanel() {
     }
   }
 
-  const salaryMsg = (r) => {
-    const lines = [t('salaryDone', uzs(r.main))]
-    for (const s of r.shortfalls || []) lines.push(`⚠ ${t('salaryShort', s.name, uzs(s.shortfall))}`)
-    return { text: lines.join('\n'), long: (r.shortfalls || []).length > 0 }
+  // salary: no immediate refresh; the split sheet refreshes state once the amounts land in the cards
+  async function paySalary() {
+    setBusy(true)
+    try {
+      const r = await api.salary(salary)
+      if (r.breakdown) showSalary(r)
+      else { notify({ text: t('salaryDone', uzs(r.main)) }); refresh() }
+    } catch (e) {
+      notify({ text: e.message, error: true })
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -62,7 +70,7 @@ export default function DemoPanel() {
         <div className="flex gap-2">
           <input id="salary" className="input num" inputMode="numeric" value={groupDigits(salary)}
             onChange={(e) => setSalary(digitsOnly(e.target.value))} />
-          <button className="btn-primary shrink-0" disabled={busy || !salary} onClick={() => run(() => api.salary(salary), salaryMsg)}>
+          <button className="btn-primary shrink-0" disabled={busy || !salary} onClick={paySalary}>
             {t('credit')}
           </button>
         </div>

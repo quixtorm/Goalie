@@ -1,0 +1,196 @@
+"""English server texts: same keys and placeholders as texts.T (checked by tests/test_i18n.py)."""
+
+EN: dict[str, str] = {
+    # errors
+    "err_income_needed": "Enter your monthly income",
+    "err_income_positive": "Income must be greater than zero",
+    "err_term": "The term must be from 1 to {max} months",
+    "err_total_pct": "Goal percents together can't be more than {max}%",
+    "err_max_goals": "You can have at most {max} goals",
+    "err_goal_amount": "The goal amount must be greater than zero",
+    "err_min_pct": "The percent must be at least {min}%",
+    "err_credit_amount": "The loan amount must be greater than zero",
+    "err_rate_negative": "The interest rate can't be negative",
+    "err_goal_not_found": "Goal not found",
+    "err_goal_not_ready": "The goal isn't reached yet",
+    "err_goal_cant_close": "This goal can't be closed",
+    "err_reorder": "The goal list doesn't match your active goals",
+    "err_obl_not_found": "Payment not found",
+    "err_amount_positive": "The amount must be greater than zero",
+    "err_date_past": "The payment date has already passed",
+    "err_topup": "Nothing to top up, or there's no money on the main card",
+    "err_already_paid": "Already paid",
+    "err_not_enough": "{short_sum} short to pay",
+    "err_goal_unavailable": "This goal isn't available right now",
+    "err_source_not_found": "Source not found",
+    "err_only_in": "Only {avail_sum} in «{name}»",
+    "err_purchase_not_found": "Purchase not found",
+    "err_already_resolved": "Already decided",
+    "err_main_not_enough": "The main card won't have enough money until payday",
+    "err_option_unavailable": "This option isn't available right now",
+    "err_need_confirm_obl": "Confirmation needed: this money is for a required payment",
+    "err_money_insufficient": "There's no longer enough money",
+    "err_prop_not_found": "Suggestion not found",
+    "err_prop_done": "This suggestion has already been handled",
+    "err_no_option": "No such option",
+    "err_unknown_action": "Unknown action",
+    "err_salary_positive": "The salary must be greater than zero",
+    "err_need_confirm": "Confirmation needed",
+    "err_check_amount_pct": "Check the amount and the percent",
+    "err_check_amount_term": "Check the amount and the term",
+    "err_not_found": "Not found",
+    "err_bad_input": "Check what you entered",
+    "err_internal": "Something went wrong. Please try again.",
+    "err_rate_limit": "Too many messages. Please wait a minute.",
+    "err_bad_calc_data": "Invalid data for the calculation",
+    "err_unknown_tool": "Unknown tool",
+    # proposals
+    "p_drift_title": "Goal «{name}» is falling behind",
+    "p_drift_text": ("Your income went down, and «{name}» moved by {shift_months}. "
+                     "If you save {new}% instead of {old}%, you'll finish on time."),
+    "p_drift_text_cap": ("«{name}» moved by {shift_months}. The most you can save is {new}%: "
+                         "then the goal will take {after_months}."),
+    "p_set_pct": "Set {pct}%",
+    "p_topup_title": "«{name}»: not enough money",
+    "p_topup_text": "Payment «{name}» is due {when}. {short_sum} short.",
+    "p_topup_partial": " Only {amount_sum} can be moved from the main card.",
+    "when_today": "today",
+    "when_in": "in {n_days}",
+    "p_transfer": "Move {amount_sum}",
+    "p_gap_title": "Money may run short before payday",
+    "p_gap_text": ("You need about {need_sum} to live on until payday, and {free_sum} is free. "
+                   "You can lower «{name}» from {old}% to {new}% for now."),
+    "p_lower": "Lower to {pct}%",
+    "p_cool_title": "A day has passed",
+    "p_cool_text": "Do you still need the purchase at «{merchant}» for {amount_sum}?",
+    "p_newgoal_title": "New goal «{name}»",
+    "p_newgoal_text": "Save {pct}% of income for «{name}» ({amount_sum}).",
+    "p_create_goal": "Create goal",
+    "p_newobl_title": "New payment «{name}»",
+    "p_newobl_text": "Add a required payment of {amount_sum} due {due_date}.",
+    "p_add_obl": "Add payment",
+    "err_step_up": "Confirm this action with your PIN",
+    "err_wrong_pin": "Wrong PIN. Attempts left: {left}",
+    "err_pin_locked": "Too many attempts. Try again in {sec} s.",
+    "err_sec_expired": "It can't be cancelled anymore: 24 hours have passed",
+    "sec_title": "Confirmed with PIN",
+    "sec_use": ("You confirmed taking {amount_sum} from «{name}». Wasn't you? You can cancel it within 24 hours."),
+    "sec_proceed": ("You confirmed taking {amount_sum} from «{name}» (a stopped purchase). Wasn't you? "
+                    "You can cancel it within 24 hours."),
+    "sec_close": ("You confirmed closing «{name}» early ({amount_sum}). Wasn't you? You can cancel it within 24 hours."),
+    "sec_credit": ("You confirmed a loan application «{name}» for {amount_sum}. Wasn't you? "
+                   "You can cancel it within 24 hours."),
+    "sec_cancel": "Cancel",
+    "sec_undone_use": "Cancelled: {amount_sum} went back to «{name}».",
+    "sec_undone_proceed": "Cancelled: {amount_sum} went back to «{name}», and the discipline bonus is restored.",
+    "sec_undone_close": "Cancelled: «{name}» is saving again.",
+    "sec_undone_credit": "The application for «{name}» is cancelled.",
+    "tx_undo": "Operation cancelled: {name}",
+    "err_credit_not_eligible": "This product doesn't fit the amount or term",
+    "credit_applied": ("Application (demo) for «{name}» sent: {amount_sum} for {n_months}. No money was moved."),
+    "a_adv_ask": "How much do you need to borrow? If it's for one of your goals, tell me which one.",
+    "a_adv_best": ("Best by cost among the bank's demo offers: «{name}» for {n_months}: {pay_sum} a month "
+                   "({share}% of salary), overpayment {over_sum}.\nWhy: the lowest total cost among the safe options "
+                   "(the payment is at most {thr}% of your lowest salary and leaves enough to live on)."),
+    "a_adv_alt": "\n• If a smaller payment matters more: «{name}» for {n_months}: {pay_sum} a month, "
+                 "but overpayment {over_sum}.",
+    "a_adv_delay": "\n• «{name}» will move by {delay_months}.",
+    "a_adv_wait": "\n• Save it yourself: {wait_months} with no overpayment (you keep {over_sum}).",
+    "a_adv_nosafe": ("There's no safe option: for any term the payment is more than {thr}% of salary or leaves too "
+                     "little to live on. The least risky is «{name}» for {n_months}: {pay_sum} a month ({share}% of "
+                     "salary). It's better to borrow less or save first."),
+    "a_adv_none": "The bank's demo catalog has no suitable products for this amount and term.",
+    "a_adv_disclaimer": ("\n\nThis is the best option by cost among the bank's demo offers for these criteria, not "
+                         "general advice. It's your decision: an application is sent only after you confirm."),
+    "plan_why_term": "To finish in {term_months} even in your weakest month, {pct}% of salary is enough.",
+    "plan_why_term_capped": ("{term_months} isn't possible: all goals together can take at most {cap}% of salary. "
+                             "I took the maximum, {pct}%, so the goal will take {worst_months}."),
+    "plan_why_auto": ("I picked {pct}% of salary: the goal will be reached in about {worst_months} even in your "
+                      "weakest month, and enough is left to live on."),
+    "plan_why_auto_capped": ("I picked the maximum, {pct}% of salary (all goals together at most {cap}%). Even in "
+                             "your weakest month the goal will be reached in {worst_months}."),
+    "p_tr_title": "{amount_sum} arrived from: {source}",
+    "p_tr_text": ("Set part of it aside for «{name}»? I suggest {pct}% of the transfer: {sug_sum}. "
+                  "Your plan and dates don't change: they're based on salary only."),
+    "p_tr_save": "Set aside {sug_sum}",
+    "r_tr_saved": "{amount_sum} set aside for «{name}».",
+    "r_set_pct": "Done: «{name}» gets {pct}% of income.",
+    "r_topup": "{amount_sum} moved to the reserve.",
+    "r_goal_created": "Goal «{name}» created.",
+    "r_obl_added": "Payment «{name}» added.",
+    # guardian
+    "g_cover": "Pay from the main card",
+    "g_cool": "Wait until tomorrow",
+    "g_no_need": "Don't need it anymore",
+    "g_proceed": "Spend anyway",
+    "g_decline": "Cancel purchase",
+    "gm_covered": "Paid from the main card. «{name}» stays untouched.",
+    "gm_cooling": "OK, let's come back to it tomorrow. If you still want it, we'll decide together.",
+    "gm_spent_goal": "Spent from «{name}». The bonus is now {rate}% a year.",
+    "gm_spent_obl": "Spent from the «{name}» reserve.",
+    "gm_declined": "Purchase cancelled. The money stays where it was.",
+    # transactions
+    "tx_salary": "Salary",
+    "bd_main": "Main card",
+    "tx_transfer": "Transfer: {source}",
+    "tx_extra": "Extra to goal «{name}»",
+    "tx_reserve": "To the «{name}» reserve",
+    "tx_pay": "Payment: {name}",
+    "tx_purchase": "{label}: {merchant}",
+    "tx_goal_used": "Goal «{name}» reached (with a {bonus_sum} bonus)",
+    "tx_goal_closed": "Goal «{name}» closed, money returned",
+    "tx_groceries": "{shop}: groceries",
+    "tx_mobile": "Uzmobile: phone",
+    "tx_metro": "Metro",
+    "tx_client": "Transfer from a client",
+    "tx_utilities": "Utilities",
+    "tx_chaikhana": "Chaikhana",
+    "tx_taxi": "Yandex Go",
+    # agent (code replies)
+    "a_nothing": "There's nothing to confirm right now. How can I help?",
+    "a_several": "There are several suggestions: press «Confirm» on the one you want.",
+    # fallback agent
+    "lock": ("Money in this subcard is protected from impulse spending. Emergencies (pharmacy, hospital) go through "
+             "with no penalty; anything else is stopped, delayed by 24 hours and loses the discipline bonus."),
+    "f_help": ("I help with money: saving for a goal, checking a loan, keeping track of required payments and telling "
+               "you how much you can spend. For example: «I want to save 50 million for a car in 3 years»."),
+    "f_ask_amount": "How much do you want to save? For example: «50 million for a car in 3 years».",
+    "f_ask_term": "In how long do you want to save {amount_sum}? For example: «in 3 years».",
+    "f_new_goal": "New goal",
+    "f_goal_ok": ("To save {amount_sum} for «{name}» in {term_months}, set aside {pct}% of income: "
+                  "that's {contrib_sum} a month."),
+    "f_goal_cap": ("{term_months} won't work: it needs {raw}% of income, and at most {cap}% is free "
+                   "({used}% already goes to other goals). At {pct}% the goal will take {worst_months}."),
+    "f_goal_body": ("\n\n• Best case: {best_months}\n• Worst case: {worst_months}\n• Goal deadline: {expiry_date}"
+                    "\n\n{lock}\n\nCreate the goal?"),
+    "w_amount": "the amount",
+    "w_term": "the term",
+    "w_rate": "the interest rate",
+    "f_credit_missing": "To calculate the loan, tell me {missing}. For example: «20 million for 12 months at 28%».",
+    "f_credit_head": "Payment: {pay_sum} a month, overpayment {over_sum}.",
+    "f_credit_dti": "\n• That's {dti}% of your lowest income (safe is up to 40%).",
+    "f_credit_cash": "• ⚠ After required payments and goals, {free_sum} a month is left: the payment is bigger.",
+    "f_credit_dti_risk": "• ⚠ The payment is more than 40% of income: that's a high risk.",
+    "f_credit_left": "• After the payment, {left_sum} of free money is left each month.",
+    "f_credit_never": "• «{name}»: with this payment you can't keep saving.",
+    "f_credit_delay": "• «{name}»: {before} → {after} mo. (+{delay_months})",
+    "f_credit_options": ("\nOptions: 1) borrow less or for longer; 2) save part of it first; "
+                         "3) skip the purchase. I don't recommend specific banks. What should I calculate next?"),
+    "f_obl_none": "No required payments yet.",
+    "f_obl_head": "Your required payments:",
+    "f_obl_ok": "✓ enough",
+    "f_obl_short": "⚠ {short_sum} short",
+    "f_obl_line": "• {name}: {amount_sum}, {when}: {mark}",
+    "f_obl_prop": "\nI've prepared a suggestion to cover the shortfall.",
+    "f_cash": ("{main_sum} on the main card. You can safely spend {free_sum}.\n\n"
+               "• {n_days} until payday; you need about {need_sum} to live on."),
+    "f_income_why": ("I build the plan on salary only, because it arrives regularly. Your lowest salary month is "
+                     "{worst_sum}, that's {annual_sum} a year.\n\n• Salary over 12 months: {sal_n} times, {sal_sum}\n"
+                     "• Transfers from family: {tr_n} times, {tr_sum}. They're irregular, so the plan doesn't rely on "
+                     "them.\n\nWhen a transfer arrives, I suggest setting part of it aside for a goal, only if you "
+                     "confirm."),
+    "f_cash_gap": "\n• ⚠ Money may run short before payday: see the suggestions in your inbox.",
+}
+
+MONTHS_EN = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
+             "November", "December"]

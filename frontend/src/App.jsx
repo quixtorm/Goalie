@@ -5,6 +5,7 @@ import { makeT } from './i18n'
 import AgentSheet from './components/AgentSheet'
 import GuardianSheet from './components/GuardianSheet'
 import Header from './components/Header'
+import SalarySheet from './components/SalarySheet'
 import StepUpSheet from './components/StepUpSheet'
 import TabBar from './components/TabBar'
 import { ErrorBox, Skeleton, Toast } from './components/ui'
@@ -25,10 +26,12 @@ export default function App() {
   const [route, setRoute] = useState({ name: 'home' })
   const [toast, setToast] = useState(null)
   const [guardian, setGuardian] = useState(null)
+  const [salaryFlow, setSalaryFlow] = useState(null) // last salary waterfall, shown as an animated sheet
   const [agentReq, setAgentReq] = useState(null)
   const [chat, setChat] = useState([])
   const [lang, setLangState] = useState(() => {
-    const l = readPref('lang', 'ru') === 'uz' ? 'uz' : 'ru'
+    const p = readPref('lang', 'ru')
+    const l = ['ru', 'uz', 'en'].includes(p) ? p : 'ru'
     setApiLang(l) // before the first request
     return l
   })
@@ -51,6 +54,9 @@ export default function App() {
     notify: (x) => setToast(x),
     openAgent: (opts = {}) => setAgentReq({ focus: 'chat', ...opts, nonce: Date.now() }),
     openGuardian: (r) => setGuardian(r),
+    // after a salary event: go to Home (the card stack is the animation target) and show the split.
+    // State is refreshed by the sheet once the amounts land, so the progress bars visibly grow.
+    showSalary: (flow) => { setRoute({ name: 'home' }); window.scrollTo({ top: 0 }); setSalaryFlow(flow) },
     // Runs a protected action: fn(token). Asks for the PIN only if there is no valid token; if the server
     // says the token is no longer valid (401 step_up), asks once more. Cancelling the PIN rejects with .cancelled.
     withStepUp: async (fn) => {
@@ -94,6 +100,8 @@ export default function App() {
         <StepUpSheet req={pinReq}
           onDone={(r) => { stepUpToken.current = { token: r.token, exp: Date.now() + r.expires_in * 1000 }; pinReq?.resolve(r.token); setPinReq(null) }}
           onCancel={() => { const e = new Error('cancelled'); e.cancelled = true; pinReq?.reject(e); setPinReq(null) }} />
+        <SalarySheet key={salaryFlow ? salaryFlow.breakdown?.length + ':' + salaryFlow.salary + ':' + salaryFlow.main : 'salary-none'}
+          flow={salaryFlow} onLanded={refresh} onClose={() => { setSalaryFlow(null); refresh() }} />
         <Toast toast={toast} onClose={() => setToast(null)} />
       </div>
     </AppCtx.Provider>

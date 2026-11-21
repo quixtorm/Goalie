@@ -1,0 +1,44 @@
+{
+  "home": {
+    "engine": "speko",
+    "voice": "speko/openai:gpt-4o-mini-tts/echo",
+    "provider": "openai",
+    "model": "gpt-4o-mini-tts",
+    "fallback": false
+  },
+  "salary": {
+    "engine": "speko",
+    "voice": "speko/openai:gpt-4o-mini-tts/echo",
+    "provider": "openai",
+    "model": "gpt-4o-mini-tts",
+    "fallback": false
+  },
+  "guardian": {
+    "engine": "speko",
+    "voice": "speko/openai:gpt-4o-mini-tts/echo",
+    "provider": "openai",
+    "model": "gpt-4o-mini-tts",
+    "fallback": false
+  },
+  "plan": {
+    "engine": "speko",
+    "voice": "speko/openai:gpt-4o-mini-tts/echo",
+    "provider": "openai",
+    "model": "gpt-4o-mini-tts",
+    "fallback": false
+  },
+  "credit": {
+    "engine": "speko",
+    "voice": "speko/openai:gpt-4o-mini-tts/echo",
+    "provider": "openai",
+    "model": "gpt-4o-mini-tts",
+    "fallback": false
+  },
+  "end": {
+    "engine": "speko",
+    "voice": "speko/openai:gpt-4o-mini-tts/echo",
+    "provider": "openai",
+    "model": "gpt-4o-mini-tts",
+    "fallback": false
+  }
+}
