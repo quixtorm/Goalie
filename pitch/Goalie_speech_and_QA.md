@@ -15,8 +15,8 @@ Team Infinity · 5-minute pitch · slides 1–11 (slide 12 only if the jury asks
 "Meet Mubina. She's 22, and she's not a real person, she's our example. She earns 7.5 million a month and saves for a car on a separate card. On Friday she goes to dinner and the cinema with friends: 150,000. Feels like nothing, right? But it pushes her car about 3 days further away. And nobody tells her that."
 
 ### Slide 3 · Problem and customer (0:25)
-"And Mubina isn't alone. We surveyed 16 people. 10 out of 15 who tried to save didn't fully reach their goal. And when we asked why, 9 out of 10 said 'thoughtless spending'. Only 2 blamed emergencies. 11 out of 16 regretted something they bought while saving.
-So who's our customer? The user is a person with a salary who's saving for something. But the one who pays is **the bank**. Why? 83% of adults here have a bank card, but only 53% of those cards are actually **active**. And not one of our 16 people keeps savings in a **deposit** or the bank's in-app savings."
+"And Mubina isn't alone. We surveyed 35 people. 19 out of 33 who tried to save didn't fully reach their goal. And when we asked why, 16 out of those 19 said 'thoughtless spending'. Only 5 blamed emergencies. 20 out of 35 regretted something they bought while saving.
+So who's our customer? The user is a person with a salary who's saving for something. But the one who pays is **the bank**. Why? 83% of adults here have a bank card, but only 53% of those cards are actually **active**. And not one of our 35 people keeps savings in a **deposit**; only 5 use the bank's in-app savings."
 
 ### Slide 4 · Solution, live demo (1:10)
 *Switch to the app.*
@@ -39,7 +39,7 @@ Here's our calculation, and to be clear, it's an **assumption** we'll check in a
 In year one we want 1 or 2 pilot banks, through the hackathon organizers, mentors and the banks' innovation teams."
 
 ### Slide 7 · Competitors (0:25)
-"What do people use today? Cash, 50%. A separate card, 44%. Nobody in our survey used a deposit or in-app savings. None of these plans from your salary or stops an impulse buy.
+"What do people use today? A separate card, 51%. Cash, 34%. Nobody in our survey used a deposit, and only 14% used in-app savings. None of these plans from your salary or stops an impulse buy.
 Click has an AI assistant called Cleo, which you get with a subscription. From what we saw, it helps you do things: pay, transfer, see reports. Goalie is different: it plans your goals and protects them.
 For the bank, the alternatives are building this themselves, their existing savings products, or doing nothing. In a pilot we'll measure how many goals people reach, how many impulse buys we stop, and for the bank, how many users become active."
 
@@ -50,7 +50,7 @@ How do we get the first 5 to 10 banks? Organizers and mentors introduce us to th
 Later, maybe, a premium version for users, the way Click already sells its assistant by subscription. But that's an option, not the plan."
 
 ### Slide 9 · What we validated (0:25)
-"What have we checked so far? A small survey, 16 people, so it's an early signal, not proof. 87.5% would accept locking part of their income until the goal, though some want a 24-hour exit. 81% say the pause with 'your goal moves X days' would help. Everyone would trust an AI to calculate the percent, half of them only if they confirm it. One person wrote: 'Yes, let's do it, just make it reliable.'
+"What have we checked so far? A small survey, 35 people, so it's an early signal, not proof. 83% would accept locking part of their income until the goal, though almost half of them want a 24-hour exit. 80% say the pause with 'your goal moves X days' would help. Everyone would trust an AI to calculate the percent, 57% only if they confirm it. One person wrote: 'Yes, let's do it, just make it reliable.'
 Next: a bigger survey, 100+ people, and a pilot with a bank. Our **go signal**: if at least 10% of invited clients become active, the model works and we continue."
 
 ### Slide 10 · Next 30 days (0:20)
@@ -69,17 +69,18 @@ And here's how you can help: we need a contact at a bank for a pilot, and someon
 ## Part 2. Questions the jury might ask
 
 Short, honest answers. If you don't know something, say "we'll measure that in the pilot". Don't make up a number.
+Where a backup slide helps, it's marked *(show B1–B7)*: open `Goalie_backup.pptx` and go to that slide.
 
 ### About the problem and the survey
 
-**1. Your survey is only 16 people. Why should we believe it?**
+**1. Your survey is only 35 people. Why should we believe it? *(show B4)***
 "You shouldn't treat it as proof. It's a first signal from a small, non-random group. That's why our next step is a survey of 100+ people and a pilot with a real bank, and we've set the go signal in advance: at least 10% of invited clients become active."
 
 **2. Most of your respondents are students, but your user has a salary. Isn't that a mismatch?**
-"Yes, fair point. 14 of 16 were 18–22, and many are students. The behavior we saw, impulse spending and saving on a separate card, is what we target, but the next survey will focus on people with a salary."
+"Yes, fair point. 29 of 35 were 18–22, 22 of 35 are students, and only 7 of 35 get a monthly salary. The behavior we saw, impulse spending and saving on a separate card, is what we target, but the next survey will focus on people with a salary."
 
 **3. Isn't impulse spending just a personal discipline problem? Why does it need an app?**
-"People already try: half save in cash, 44% on a separate card. And still 10 of 15 didn't fully reach their goal. The missing piece is a reminder at the moment of the purchase: 'this costs your goal 3 days'. 81% said that kind of pause would help."
+"People already try: half save on a separate card, a third in cash. And still 19 of 33 didn't fully reach their goal. The missing piece is a reminder at the moment of the purchase: 'this costs your goal 3 days'. 80% said that kind of pause would help."
 
 ### About the product
 
@@ -92,10 +93,10 @@ Short, honest answers. If you don't know something, say "we'll measure that in t
 **6. What if the AI makes a mistake or invents a number?**
 "It can't change the numbers. They come from the calculation code, which has over a hundred automated tests. The AI only puts them into words. And if the AI service is down, the app uses a built-in fallback that gives the same numbers."
 
-**7. Can someone trick the AI into moving money (prompt injection)?**
+**7. Can someone trick the AI into moving money (prompt injection)? *(show B2)***
 "No. The AI has no tool that moves money. It can only propose; a person confirms. Whether a purchase is an emergency is decided by code from the MCC code, not by the AI, so a fake shop name can't change it."
 
-**8. How do you pick the percent of salary?**
+**8. How do you pick the percent of salary? *(show B1)***
 "Code picks it from the salary only, not from money relatives send. It plans on the worst of the last 6 monthly salaries, so the plan survives a bad month. It finds the smallest percent that reaches the goal in time, and all goals together are capped at 40% of salary."
 
 **9. Why only salary? Many people get money from family.**
@@ -109,7 +110,7 @@ Short, honest answers. If you don't know something, say "we'll measure that in t
 
 ### About security and data
 
-**12. Is the user's data safe? What does the AI see?**
+**12. Is the user's data safe? What does the AI see? *(show B2)***
 "The AI gets a short summary: balances, goals and upcoming payments. It doesn't get a name or a card number. Subcards have no card details, so they can't be paid with. In a bank, this would plug into the bank's own login and security; in the prototype it's simulated."
 
 **13. Can a bank legally lock a customer's money?**
@@ -135,7 +136,7 @@ Short, honest answers. If you don't know something, say "we'll measure that in t
 **19. How is this different from Click's Cleo or a bank's savings 'piggy bank'?**
 "In the screens we checked, Cleo helps you do operations: pay, transfer, see reports. A piggy bank just holds money. Goalie plans the goal from your salary, splits each salary automatically, and stops impulse buys at the moment of purchase."
 
-**20. The credit advisor ranks the bank's own loans. Isn't that a conflict of interest?**
+**20. The credit advisor ranks the bank's own loans. Isn't that a conflict of interest? *(show B3)***
 "It ranks by total cost for the customer, not by what's best for the bank. It only shows safe options, where the payment is at most 40% of the worst salary. It shows how each loan delays the goals and compares with saving it yourself. The customer decides, and in the demo the agent never applies for a loan."
 
 **21. How much does the AI cost per user?**
@@ -155,9 +156,41 @@ Short, honest answers. If you don't know something, say "we'll measure that in t
 **25. You said you built it with AI tools. What did you do yourselves?**
 "We came up with the idea, did the research and the survey, designed the product rules (salary only, worst-month planning, emergencies pass, nothing moves without confirmation), and checked the results. AI tools helped us build the prototype faster."
 
+### About design and testing
+
+**26. How did you arrive at this design? What did you change along the way?** *(show B5)*
+"We made six changes as a team. For example, at first the user chose the percent with a slider; we replaced that with the agent picking it from the worst salary, because a manual input defeats the purpose and 43% of our respondents say their income varies. And when we reviewed our own demo, the bonus loss for a 150,000 purchase looked unrealistically large, so we changed it to count only the next 12 months. To be clear, these are team decisions; we haven't tested them with users yet."
+
+**27. Who exactly is your user? Did you interview anyone?** *(show B6)*
+"Our problem statement: a salaried young adult who regrets unplanned spending needs to keep goal money untouched, but faces impulse spending and irregular income, with no tool that shows the cost of a slip. Mubina is a proto-persona: fictional, built from our survey patterns. We haven't done interviews yet, and we say so on the slide."
+
+**28. Have you done any usability testing?** *(show B7)*
+"Not yet, and we don't claim it. What we have is the survey of 35, a working prototype with 118 automated tests, and our design iterations. The usability test is planned: 5 to 8 representative users and three tasks: create a goal from one sentence, understand the stop card, and confirm an agent proposal."
+
+**29. How will you know the test went well?** *(show B7)*
+"We'll measure task completion, time on task, errors, and a standard satisfaction score called SUS. And we'll set the success criteria before the test, not after."
+
+**30. Isn't the stop card annoying? People might just turn it off.**
+"It only appears when you spend goal money on something that isn't an emergency. Everyday spending from the main card is never stopped. And 80% of our respondents said this kind of pause would help. Whether real users find it annoying is exactly what the usability test and the pilot will show."
+
 ---
 
-## Part 3. Glossary: finance and banking terms
+## Part 3. Backup slides: which one to open
+
+| Jury asks about… | Open |
+|---|---|
+| How the percent and the worst case are calculated | **B1** |
+| Security, data, prompt injection | **B2** |
+| How loans are ranked, conflict of interest | **B3** |
+| Full survey results, sample size | **B4** |
+| Design process, what you changed | **B5** |
+| Who the user is, persona, problem statement | **B6** |
+| Testing, evaluation, next validation | **B7** |
+| "Can we see more?" | **Slide 12** video in the pitch deck, or the QR code |
+
+---
+
+## Part 4. Glossary: finance and banking terms
 
 - **Active card / active user:** a card or person that actually uses the service in a period. Many cards exist but sit unused; banks earn from active ones.
 - **Assumption:** a number we believe but haven't proven yet. We say it out loud so the jury knows it isn't a fact.
@@ -194,4 +227,7 @@ Short, honest answers. If you don't know something, say "we'll measure that in t
 - **Premium tier:** a paid upgraded version for users.
 - **Cashback:** part of a purchase amount returned to the customer.
 - **Deferral limit:** a "buy now, pay later" limit offered by some apps.
+- **Proto-persona:** a fictional user profile built from early data (here, the survey) before real interviews.
+- **Usability test:** watching real users try tasks in the product to see where they get stuck.
+- **SUS (System Usability Scale):** a standard 10-question questionnaire that gives a usability score from 0 to 100.
 - **Financial inclusion:** how many people have access to and use banking services. The Central Bank's index is where the 83% and 53% come from.
